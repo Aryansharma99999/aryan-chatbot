@@ -1,0 +1,67 @@
+
+From 1234567890abcdef1234567890abcdef12345678 Mon Sep 17 00:00:00 2001
+From: ChatGPT <chatgpt@example.com>
+Date: Sat, 14 Sep 2025 23:45:00 +0530
+Subject: [PATCH] Add blog feature (markdown-based)
+
+---
+ src/components/BlogList.tsx  | 45 ++++++++++++++++++++++++++++++
+ src/components/BlogPost.tsx  | 50 ++++++++++++++++++++++++++++++++
+ src/pages/Blog.tsx           | 30 ++++++++++++++++++
+ src/posts/first-post.md      | 12 ++++++++
+ src/posts/second-post.md     | 12 ++++++++
+ 5 files changed, 149 insertions(+)
+ create mode 100644 src/components/BlogList.tsx
+ create mode 100644 src/components/BlogPost.tsx
+ create mode 100644 src/pages/Blog.tsx
+ create mode 100644 src/posts/first-post.md
+ create mode 100644 src/posts/second-post.md
+
+diff --git a/src/components/BlogList.tsx b/src/components/BlogList.tsx
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/src/components/BlogList.tsx
+@@
++import React from 'react';
++import { Link } from 'react-router-dom';
++
++type PostMeta = {
++  slug: string;
++  title: string;
++  date: string;
++  excerpt: string;
++};
++
++interface BlogListProps {
++  posts: PostMeta[];
++}
++
++export default function BlogList({ posts }: BlogListProps) {
++  return (
++    <div className="space-y-6">
++      {posts.map((post) => (
++        <div key={post.slug} className="p-4 rounded-xl shadow-md hover:shadow-lg transition">
++          <h2 className="text-xl font-bold">
++            <Link to={`/blog/${post.slug}`}>{post.title}</Link>
++          </h2>
++          <p className="text-sm text-gray-500">{post.date}</p>
++          <p>{post.excerpt}</p>
++        </div>
++      ))}
++    </div>
++  );
++}
+diff --git a/src/posts/first-post.md b/src/posts/first-post.md
+new file mode 100644
+index 0000000..2222222
+--- /dev/null
++++ b/src/posts/first-post.md
+@@
++---
++title: "My First Blog Post"
++date: "2025-09-14"
++excerpt: "This is my first blog post on my personal site."
++---
++
++Hello world! This is my very first blog post. I'm excited to share my thoughts here.
