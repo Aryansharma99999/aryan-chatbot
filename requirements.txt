@@ -1,1 +1,5 @@
 streamlit
+# requirements.txt
+streamlit
+# your other dependencies...
+markdown
