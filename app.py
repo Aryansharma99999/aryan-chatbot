@@ -4,8 +4,8 @@ import time
 from markdown import markdown
 import streamlit as st 
 
-st.set_page_config(page_title='Aryan Chatbot & Blog')
-
+# Make sure this is the exact line in your app.py
+st.set_page_config(page_title='Aryan Chatbot & Blog', layout="wide", initial_sidebar_state="expanded")
 # --- 1. BLOG UTILITY FUNCTIONS (Reads and Parses Posts) ---
 
 POSTS_DIR = os.path.join(os.path.dirname(__file__), 'blog_posts')
