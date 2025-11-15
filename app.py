@@ -7,11 +7,39 @@ from datetime import datetime
 # ---------------------------------------------------------
 # STREAMLIT CONFIG
 # ---------------------------------------------------------
-st.set_page_config(
-    page_title="Aryan Sharma — Portfolio",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+st.set_page_config(page_title="Aryan Sharma — Portfolio", layout="wide", initial_sidebar_state="collapsed")
+
+# ---------------------------------------------------------
+# REMOVE ALL STREAMLIT PADDING / MARGINS (FULL SCREEN FIX)
+# ---------------------------------------------------------
+st.markdown("""
+<style>
+
+/* REMOVE ALL SPACE Streamlit adds */
+main > div {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+/* REMOVE INLINE PADDING */
+header, .stApp {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* FULL WINDOW SIZE */
+html, body, .stApp, iframe {
+    width: 100% !important;
+    height: 100% !important;
+    overflow-x: hidden !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # GALLERY DIRECTORY
@@ -33,7 +61,7 @@ if is_admin:
 
     uploaded = st.sidebar.file_uploader(
         "Upload Images", 
-        type=["png", "jpg", "jpeg", "webp"], 
+        type=["png", "jpg", "jpeg", "webp"],
         accept_multiple_files=True
     )
 
@@ -57,7 +85,6 @@ if is_admin:
             st.sidebar.success("Deleted.")
             st.experimental_rerun()
 
-
 # ---------------------------------------------------------
 # BUILD GALLERY HTML
 # ---------------------------------------------------------
@@ -72,7 +99,7 @@ def get_gallery_html():
         html += f"""
             <div class="card">
                 <img src="gallery/{img.name}" 
-                style="width:100%;height:180px;object-fit:cover;border-radius:10px;">
+                    style="width:100%;height:180px;object-fit:cover;border-radius:10px;">
             </div>
         """
     return html
@@ -92,7 +119,7 @@ html_template = """
 
 <style>
 
- /* GENERAL */
+/* BACKGROUND */
 body {
     margin: 0;
     font-family: Poppins, sans-serif;
@@ -101,11 +128,12 @@ body {
     overflow-x: hidden;
 }
 
-/* FULL SCREEN PAGE */
+/* FULLSCREEN PAGE WRAPPER */
 .page {
     width: 100%;
     min-height: 100vh;
-    padding: 40px 64px;
+    padding: 0;
+    margin: 0;
     box-sizing: border-box;
     position: relative;
     z-index: 2;
@@ -118,11 +146,15 @@ body {
     width: 100%;
     height: 100%;
     pointer-events: none;
+    z-index: 0;
 }
 .stars {
     background:
-        transparent url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><circle cx="1" cy="1" r="1" fill="white" fill-opacity="0.03"/></svg>')
-        repeat;
+        transparent url('data:image/svg+xml;utf8,
+            <svg xmlns="http://www.w3.org/2000/svg" width="2" height="2">
+                <circle cx="1" cy="1" r="1" fill="white" fill-opacity="0.03"/>
+            </svg>'
+        ) repeat;
     background-size: 3px 3px;
     animation: starMove 120s linear infinite;
 }
@@ -133,7 +165,7 @@ body {
 .twinkling {
     background-image: radial-gradient(circle, rgba(255,255,255,0.18), transparent 50%);
     animation: twinkle 5s infinite linear;
-    opacity: .12;
+    opacity: .15;
 }
 @keyframes twinkle {
     0% {opacity: .05;}
@@ -155,151 +187,133 @@ body {
 .leftbtn {
     width: 56px;
     height: 56px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     display: grid;
     place-items: center;
     cursor: pointer;
 }
 .leftbtn:hover {
-    transform: translateX(5px);
+    transform: translateX(6px);
 }
 .leftbtn img {
     width: 24px;
 }
 
-/* HERO SECTION */
+/* HERO BOX */
 .hero-wrap {
     width: 100%;
-    margin-bottom: 40px;
+    padding-top: 160px;
+    display:flex;
+    justify-content:center;
 }
 .hero {
-    width: 100%;
-    max-width: 1300px;
-    margin: auto;
+    width: 90%;
+    max-width: 1350px;
     height: 300px;
-    border-radius: 20px;
-    padding: 30px;
-    background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(7px);
+    border-radius: 22px;
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(8px);
     border: 2px solid rgba(255,255,255,0.08);
-    position: relative;
     box-shadow: 0 20px 80px rgba(0,0,0,0.6);
 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
 }
 .hero h1 {
-    font-size: 54px;
+    font-size: 58px;
     margin: 0;
     font-weight: 800;
-    text-shadow: 0 3px 14px rgba(140,40,255,0.4);
 }
-
 .typing-block {
     margin-top: 10px;
+    font-size: 22px;
+    color: #d9c8ff;
     min-height: 28px;
-    font-size: 20px;
-    color: #d7c4ff;
     font-weight: 600;
-    text-align: center;
 }
-
-/* ABOUT MINI TEXT */
 .about-mini {
-    margin-top: 12px;
-    padding: 12px 18px;
-    font-size: 14.5px;
-    color: rgba(255,255,255,0.9);
-    background: rgba(255,255,255,0.04);
+    margin-top: 16px;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.05);
     border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.1);
-    max-width: 1000px;
-    text-align: center;
+    border: 1px solid rgba(255,255,255,0.12);
+    max-width: 900px;
+    text-align:center;
 }
 
-/* GALLERY / PROJECTS */
+/* GALLERY */
 .section {
-    margin-top: 40px;
-}
-.section h2 {
-    font-size: 28px;
-    margin-bottom: 16px;
+    padding: 40px 60px;
 }
 .grid {
-    display: grid;
-    gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display:grid;
+    gap:20px;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
 }
 .card {
-    padding: 12px;
-    background: rgba(255,255,255,0.04);
-    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    padding:10px;
+    border-radius:12px;
 }
 
 /* CHAT WIDGET */
 .chat-widget {
     position: fixed;
+    bottom: 24px;
     left: 90px;
-    bottom: 28px;
     width: 400px;
-    max-height: 70vh;
-    background: linear-gradient(180deg, #2b2b2b, #202020);
-    border-radius: 18px;
-    display: none;
-    z-index: 200;
-    overflow: hidden;
+    background: #242424;
+    border-radius:16px;
+    display:none;
+    z-index:200;
 }
 .chat-header {
-    padding: 12px 16px;
-    display: flex;
-    gap: 12px;
-    font-weight: 700;
-    color: #00c8ff;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 16px;
+    font-weight:800;
+    color:#00d1ff;
+    border-bottom:1px solid rgba(255,255,255,0.08);
 }
 .chat-body {
-    padding: 14px;
-    overflow-y: auto;
-    height: 260px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    padding:14px;
+    height:250px;
+    overflow-y:auto;
 }
 .bot-msg {
-    background: #3d3d3d;
-    padding: 10px 14px;
-    border-radius: 12px;
+    background:#333;
+    padding:10px 14px;
+    border-radius:12px;
+    margin-bottom:10px;
 }
 .user-msg {
-    background: #00c8ff;
-    color: #003344;
-    padding: 10px 14px;
-    border-radius: 12px;
-    align-self: flex-end;
+    background:#00d1ff;
+    color:#003344;
+    padding:10px 14px;
+    border-radius:12px;
+    margin-bottom:10px;
+    text-align:right;
 }
 .chat-input {
-    display: flex;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    display:flex;
+    border-top:1px solid rgba(255,255,255,0.1);
 }
 .chat-input input {
-    flex: 1;
-    padding: 10px;
-    background: #111;
-    border: none;
-    color: white;
-    outline: none;
+    flex:1;
+    padding:10px;
+    background:#111;
+    border:none;
+    color:white;
 }
 .chat-input button {
-    background: #00c8ff;
-    color: #003344;
-    border: none;
-    padding: 10px 15px;
-    cursor: pointer;
-    font-weight: 700;
+    background:#00d1ff;
+    border:none;
+    padding:10px 14px;
+    color:#002e35;
+    font-weight:700;
+    cursor:pointer;
 }
 
 </style>
@@ -310,23 +324,24 @@ body {
 <div class="stars"></div>
 <div class="twinkling"></div>
 
-<!-- LEFT TOOLBAR -->
+<!-- LEFT BAR -->
 <div class="leftbar">
     <div class="leftbtn" onclick="scrollToId('top')">
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/
-2000/svg' viewBox='0 0 24 24' fill='white'><path d='M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z'/></svg>">
+        <img src="data:image/svg+xml;utf8,
+        <svg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'>
+        <path d='M12 3 2 12h3v8h6v-6h2v6h6v-8h3z'/></svg>">
     </div>
-
     <div class="leftbtn" onclick="scrollToId('gallery')">
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www/
-w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M21 19V5a2 2 0 0 0-2-2H5C3.9 3 3 3.9 3 5v14l4-3 3 2 5-4 6 4z'/></svg>">
+        <img src="data:image/svg+xml;utf8,
+        <svg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'>
+        <path d='M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 
+2v14l4-3 3 2 5-4 6 4z'/></svg>">
     </div>
-
     <div class="leftbtn" onclick="toggleChat()">
-        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www/
-w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M21 6h-2v9H6v2c0 1.1.9 2 2 2h9l4 4V8c0-1.1-.9-2-2-2zM17 2H3c-1.1 0-2 .9-2 2v12l4-4h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'/></svg>">
+        <img src="data:image/svg+xml;utf8,
+        <svg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 24 24'>
+        <path d='M4 2h16v14l-4-4H4z'/></svg>">
     </div>
-
 </div>
 
 <!-- PAGE -->
@@ -344,75 +359,63 @@ w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M21 6h-2v9H6v2c0 1.1.
     <!-- GALLERY -->
     <div class="section" id="gallery">
         <h2>📷 Gallery</h2>
-        <div class="grid">
-            ###GALLERY###
-        </div>
+        <div class="grid">###GALLERY###</div>
     </div>
 
     <!-- PROJECTS -->
     <div class="section">
         <h2>🚀 Projects</h2>
         <div class="grid">
-            <div class="card"><strong>Chatbot Website</strong><br>AI-powered chat interface</div>
-            <div class="card"><strong>Portfolio Builder</strong><br>Create sites instantly</div>
-            <div class="card"><strong>AI Experiments</strong><br>Fun ML tests</div>
+            <div class="card"><b>Chatbot Website</b><br>AI Chat UI</div>
+            <div class="card"><b>Portfolio Builder</b><br>Create sites instantly</div>
+            <div class="card"><b>AI Experiments</b><br>Mini ML Projects</div>
         </div>
     </div>
 
 </div>
 
-<!-- CHATBOX -->
+<!-- CHAT BOX -->
 <div class="chat-widget" id="chatWidget">
-    <div class="chat-header">
-        Aryan's AI Chatbot — Ask me about Aryan
-    </div>
+    <div class="chat-header">Aryan's AI Chatbot — Ask me about Aryan</div>
     <div class="chat-body" id="chatBody">
-        <div class="bot-msg">Hi! Ask me anything about Aryan.</div>
+        <div class="bot-msg">Hi! Ask me about Aryan.</div>
     </div>
     <div class="chat-input">
-        <input id="chatInput" placeholder="Type a message...">
-        <button onclick="sendMessage()">Send</button>
+        <input id="chatInput" placeholder="Type message...">
+        <button onclick="sendChat()">Send</button>
     </div>
 </div>
 
 <script>
 
 function scrollToId(id){
-    var el = document.getElementById(id);
-    if(el){
-        el.scrollIntoView({behavior:"smooth"});
-    }
+    document.getElementById(id).scrollIntoView({behavior:"smooth"});
 }
 
-/* CHATBOX TOGGLE */
+/* CHAT TOGGLE */
 function toggleChat(){
     var box = document.getElementById("chatWidget");
-    if(box.style.display === "block"){
-        box.style.display = "none";
-    } else {
-        box.style.display = "block";
-    }
+    box.style.display = (box.style.display === "block") ? "none" : "block";
 }
 
-/* CHAT SEND */
-function sendMessage(){
+/* SEND CHAT */
+function sendChat(){
     var input = document.getElementById("chatInput");
-    var body = document.getElementById("chatBody");
     var msg = input.value.trim();
-    if(msg === "") return;
+    if(!msg) return;
 
+    var body = document.getElementById("chatBody");
     body.innerHTML += "<div class='user-msg'>" + msg + "</div>";
     input.value = "";
 
-    setTimeout(function(){
-        body.innerHTML += "<div class='bot-msg'>This is a sample reply. You can integrate GPT here.</div>";
+    setTimeout(() => {
+        body.innerHTML += "<div class='bot-msg'>This is a sample reply. Connect GPT API here.</div>";
         body.scrollTop = body.scrollHeight;
     }, 600);
-
     body.scrollTop = body.scrollHeight;
 }
 
-/* TYPING + DELETING ANIMATION */
+/* TYPING ANIMATION */
 var roles = [
     "I'm a Web Designer",
     "I'm a Problem Solver",
@@ -420,7 +423,6 @@ var roles = [
     "I'm a Developer",
     "I'm a Writer"
 ];
-
 var aboutLines = [
     "Hi, I'm Aryan Sharma, currently pursuing a Bachelor's Degree.",
     "I'm passionate about coding, learning, and developing new things.",
@@ -429,60 +431,59 @@ var aboutLines = [
 
 function typeDelete(elem, text, speed){
     return new Promise(resolve => {
-        let i = 0;
-        elem.innerHTML = "";
-        let add = setInterval(() => {
-            elem.innerHTML += text.charAt(i);
+        let i=0;
+        elem.innerHTML="";
+        let writer=setInterval(()=>{
+            elem.innerHTML+=text[i];
             i++;
-            if(i >= text.length){
-                clearInterval(add);
-                setTimeout(() => resolve(), 900);
+            if(i===text.length){
+                clearInterval(writer);
+                setTimeout(resolve,900);
             }
-        }, speed);
-    }).then(() => {
-        return new Promise(resolve => {
-            let j = elem.innerHTML.length;
-            let del = setInterval(() => {
-                elem.innerHTML = elem.innerHTML.slice(0, j-1);
+        },speed);
+    }).then(()=>{
+        return new Promise(resolve=>{
+            let j=elem.innerHTML.length;
+            let eraser=setInterval(()=>{
+                elem.innerHTML=elem.innerHTML.slice(0,j-1);
                 j--;
-                if(j <= 0){
-                    clearInterval(del);
+                if(j<=0){
+                    clearInterval(eraser);
                     resolve();
                 }
-            }, 28);
+            },25);
         });
     });
 }
 
-async function typingLoop(){
-    var t = document.getElementById("typingLine");
-    var a = document.getElementById("aboutMini");
-
+async function loop(){
+    var t=document.getElementById("typingLine");
+    var a=document.getElementById("aboutMini");
     while(true){
         for(let r of roles){
-            await typeDelete(t, r, 50);
+            await typeDelete(t,r,50);
         }
         for(let line of aboutLines){
-            await typeDelete(t, line, 30);
-            a.innerHTML = line;
-            await new Promise(r => setTimeout(r, 1500));
+            await typeDelete(t,line,30);
+            a.innerHTML=line;
+            await new Promise(r=>setTimeout(r,1500));
         }
     }
 }
-
-setTimeout(typingLoop, 300);
+setTimeout(loop,300);
 
 </script>
+
 </body>
 </html>
 """
 
 # ---------------------------------------------------------
-# INSERT THE GALLERY HTML SAFELY (NO f-string)
+# INSERT GALLERY
 # ---------------------------------------------------------
 html_template = html_template.replace("###GALLERY###", gallery_html)
 
 # ---------------------------------------------------------
-# RENDER FULL SITE
+# RENDER SITE (FULLSCREEN)
 # ---------------------------------------------------------
-components.html(html_template, height=1500, scrolling=True)
+components.html(html_template, height=800, scrolling=False)
