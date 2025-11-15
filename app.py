@@ -106,3 +106,11 @@ body{margin:0;font-family:Poppins;background:linear-gradient(180deg,#0b0020,#210
 HTML = HTML.replace("###GALLERY###", GALLERY_BLOCK)
 
 components.html(HTML, height=2000, scrolling=True)
+import streamlit as st
+
+st.set_page_config(layout="wide")
+
+# --- Load the WebGL animation ---
+html_code = open("animated_bg.html", "r").read()
+
+st.components.v1.html(html_code, height=900, width=None)
