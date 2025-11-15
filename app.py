@@ -1,10 +1,107 @@
 # app.py
 import streamlit as st
 import streamlit.components.v1 as components
+import os
+from pathlib import Path
+from datetime import datetime
+import shutil
 
+# -------------------------
+# Config / Setup
+# -------------------------
 st.set_page_config(page_title="Aryan Sharma — Portfolio", layout="wide", initial_sidebar_state="collapsed")
 
-html = r"""
+GALLERY_DIR = Path("gallery")
+GALLERY_DIR.mkdir(exist_ok=True)
+
+# -------------------------
+# Admin detection via URL param ?admin=1
+# -------------------------
+query_params = st.experimental_get_query_params()
+is_admin = query_params.get("admin", ["0"])[0] == "1"
+
+# -------------------------
+# Admin UI (upload + delete) - shown only if ?admin=1
+# -------------------------
+if is_admin:
+    st.markdown("<div style='position:fixed;right:18px;top:18px;z-index:99999'>"
+                "<div style='background:#1b0b2b;padding:10px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,0.6)'>"
+                "<strong style='color:#fff'>Admin Panel</strong><br><small style='color:#ddd'>Uploads saved to /gallery</small>"
+                "</div></div>", unsafe_allow_html=True)
+
+    st.sidebar.header("Admin — Gallery Manager")
+    st.sidebar.write("Upload images (jpg, png, webp). They will appear in the Gallery.")
+
+    uploaded = st.sidebar.file_uploader("Upload image", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
+    if uploaded:
+        for file in uploaded:
+            # save file to gallery dir with timestamp to avoid collisions
+            filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{file.name}"
+            dest = GALLERY_DIR / filename
+            with open(dest, "wb") as f:
+                f.write(file.getbuffer())
+        st.sidebar.success(f"Saved {len(uploaded)} file(s). Refresh the main page to see them.")
+        st.experimental_rerun()
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Existing images")
+    imgs = sorted([p for p in GALLERY_DIR.iterdir() if p.is_file()], key=os.path.getmtime, reverse=True)
+    if not imgs:
+        st.sidebar.info("No images in gallery yet.")
+    else:
+        for img_path in imgs:
+            cols = st.sidebar.columns([2,1])
+            cols[0].write(f"**{img_path.name}**")
+            if cols[1].button("Delete", key=f"del_{img_path.name}"):
+                try:
+                    img_path.unlink()
+                    st.sidebar.success(f"Deleted {img_path.name}")
+                    st.experimental_rerun()
+                except Exception as e:
+                    st.sidebar.error(f"Error deleting: {e}")
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("Admin access via URL param: `?admin=1`")
+
+# -------------------------
+# Prepare gallery HTML from uploaded images
+# -------------------------
+# We will reference the images as relative paths (gallery/filename).
+# Streamlit serves files from the working directory, so components.html can load them.
+
+def build_gallery_items():
+    imgs = sorted([p for p in GALLERY_DIR.iterdir() if p.is_file()], key=os.path.getmtime, reverse=True)
+    if not imgs:
+        # placeholder cards
+        placeholders = []
+        for i in range(4):
+            placeholders.append("""
+            <div class="card">
+              <div style="height:140px;display:grid;place-items:center;color:rgba(255,255,255,0.5)">
+                Photo {i} — upload via Admin
+              </div>
+            </div>
+            """.replace("{i}", str(i+1)))
+        return "\n".join(placeholders)
+    html_parts = []
+    for p in imgs:
+        url = f"gallery/{p.name}"
+        # safe HTML for each card
+        part = f"""
+        <div class="card">
+          <img src="{url}" style="width:100%;height:180px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.03)">
+        </div>
+        """
+        html_parts.append(part)
+    return "\n".join(html_parts)
+
+gallery_html = build_gallery_items()
+
+# -------------------------
+# Full HTML site (with gallery injected)
+# -------------------------
+# This HTML is self-contained; we inject gallery_html where indicated.
+html_template = f"""
 <!doctype html>
 <html>
 <head>
@@ -13,65 +110,52 @@ html = r"""
   <title>Aryan Sharma — Portfolio</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg1: #0b0020;
-      --bg2: #210034;
-      --accent: #9b3bff;
-      --accent-2: #4a1bd8;
-      --glass: rgba(255,255,255,0.03);
-      --muted: rgba(255,255,255,0.8);
-      --card: rgba(255,255,255,0.03);
-      --maxw: 1200px;
-    }
-    html,body { height:100%; margin:0; font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-    body {
-      background: radial-gradient(circle at 10% 90%, rgba(92,18,138,0.14), transparent 8%),
-                  linear-gradient(180deg, var(--bg1), var(--bg2) 60%);
+    :root{{ --maxw:1400px; }}
+    html,body{{ height:100%; margin:0; font-family: Poppins, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }}
+    body {{
+      background: linear-gradient(180deg, #0b0020 0%, #210034 60%);
       color: #fff;
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
       overflow-x: hidden;
-    }
+      min-height:100vh;
+    }}
 
     /* STARFIELD (animated) */
-    .stars, .twinkling {
-      position: fixed;
-      top:0; left:0; right:0; bottom:0;
-      width:100%; height:100%;
-      display:block;
-      z-index:0;
-      pointer-events:none;
-    }
-    .stars {
+    .stars, .twinkling {{
+      position: fixed; top:0; left:0; right:0; bottom:0; width:100%; height:100%; display:block; z-index:0; pointer-events:none;
+    }}
+    .stars {{
       background: transparent url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><circle cx="1" cy="1" r="1" fill="white" fill-opacity="0.03"/></svg>') repeat;
       background-size: 3px 3px;
       animation: moveStars 120s linear infinite;
       opacity:0.9;
       transform: translateZ(0);
-    }
-    @keyframes moveStars { from {background-position:0 0} to {background-position: -2000px 2000px} }
+    }}
+    @keyframes moveStars {{ from {{background-position:0 0}} to {{background-position: -2000px 2000px}} }}
 
-    .twinkling {
+    .twinkling {{
       background-image: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%);
       background-repeat: repeat;
       background-size: 600px 600px;
       animation: twinkle 6s linear infinite;
       opacity:0.15;
       mix-blend-mode: screen;
-    }
-    @keyframes twinkle { 0%{opacity:0.06}50%{opacity:0.17}100%{opacity:0.06} }
+    }}
+    @keyframes twinkle {{ 0%{{opacity:0.06}}50%{{opacity:0.17}}100%{{opacity:0.06}} }}
 
-    /* Container */
-    .page {
+    /* Page container full-screen */
+    .page {{
       position: relative;
       z-index: 2;
-      max-width: var(--maxw);
-      margin: 40px auto;
-      padding: 20px;
-    }
+      width: 100%;
+      min-height: 100vh;
+      padding: 40px 64px;
+      box-sizing: border-box;
+    }}
 
     /* Left fixed icon bar */
-    .leftbar {
+    .leftbar {{
       position: fixed;
       left: 18px;
       top: 40%;
@@ -80,109 +164,102 @@ html = r"""
       flex-direction:column;
       gap:14px;
       z-index: 40;
-    }
-    .leftbtn {
-      width:54px;height:54px;border-radius:12px;
+    }}
+    .leftbtn {{
+      width:56px;height:56px;border-radius:12px;
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border: 2px solid rgba(255,255,255,0.03);
       display:grid;place-items:center;
       cursor:pointer;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       transition: transform .18s ease, box-shadow .18s ease;
-    }
-    .leftbtn:hover{ transform: translateX(6px) }
-    .leftbtn img{ width:22px;height:22px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6)) }
+    }}
+    .leftbtn:hover{{ transform: translateX(6px) }}
+    .leftbtn img{{ width:22px;height:22px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6)) }}
 
     /* HERO BOX */
-    .hero-wrap {
+    .hero-wrap {{
+      width: 100%;
       position: relative;
-      padding: 28px;
+      padding: 18px 0;
       border-radius: 22px;
       margin-bottom: 36px;
       z-index:5;
-    }
-    .hero {
-      height: 240px;
+    }}
+    .hero {{
+      width: 100%;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      height: 300px;
       border-radius:18px;
       display:flex;
       flex-direction:column;
       align-items:center;
       justify-content:center;
       gap:12px;
-      padding: 18px 28px;
+      padding: 28px;
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border-radius:18px;
       border: 2px solid rgba(255,255,255,0.02);
       backdrop-filter: blur(6px);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
       position:relative;
       overflow:hidden;
-    }
-
-    /* glowing neon border (inner) */
-    .hero::after{
-      content:'';
-      position:absolute;
-      inset:12px;
-      border-radius:14px;
-      pointer-events:none;
-      border: 3px solid transparent;
-      background: linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0));
-      box-shadow: inset 0 0 0 2px rgba(200,120,255,0.03);
-    }
+    }}
 
     /* outer animated stroke */
-    .glow-border {
+    .glow-border {{
       position: absolute;
-      inset: -6px;
-      border-radius:22px;
+      inset: -8px;
+      border-radius:24px;
       pointer-events:none;
       z-index:1;
       background: conic-gradient(from 120deg, rgba(138,57,243,0.16), rgba(180,92,255,0.14), rgba(138,57,243,0.12));
       filter: blur(10px);
       animation: rotate 10s linear infinite;
       opacity:0.9;
-    }
-    @keyframes rotate { to { transform: rotate(360deg) } }
+    }}
+    @keyframes rotate {{ to {{ transform: rotate(360deg) }} }}
 
-    .hero h1 {
-      font-size:44px;
+    .hero h1 {{
+      font-size:52px;
       margin:0;
       font-weight:800;
       letter-spacing:-0.02em;
       z-index:3;
       color: white;
-      text-shadow: 0 6px 30px rgba(150,60,255,0.28);
-    }
-    .hero .typing-block {
-      font-size:18px;
+      text-shadow: 0 6px 40px rgba(150,60,255,0.28);
+    }}
+    .hero .typing-block {{
+      font-size:20px;
       color: #d9b7ff;
       font-weight:600;
-      min-height:24px;
+      min-height:30px;
       z-index:3;
       text-align:center;
       letter-spacing:0.2px;
-    }
+    }}
 
     /* about mini-box inside hero */
-    .about-mini {
+    .about-mini {{
       margin-top:8px;
-      padding:10px 18px;
+      padding:12px 18px;
       border-radius:12px;
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       border: 1px solid rgba(255,255,255,0.03);
-      max-width:880px;
+      max-width:1100px;
       z-index:3;
-      color:var(--muted);
+      color:rgba(255,255,255,0.88);
       font-size:15px;
-    }
+      text-align:center;
+    }}
 
     /* CHAT WIDGET */
-    .chat-widget {
+    .chat-widget {{
       position: fixed;
-      left: 80px; /* since leftbar exists */
+      left: 92px; /* since leftbar exists */
       bottom: 24px;
-      width: 360px;
+      width: 420px;
       max-width: calc(100% - 120px);
       border-radius: 18px;
       background: linear-gradient(180deg,#262626,#2e2e2e);
@@ -191,8 +268,8 @@ html = r"""
       overflow: hidden;
       transform-origin: bottom left;
       display: none; /* toggled with JS */
-    }
-    .chat-header {
+    }}
+    .chat-header {{
       padding: 14px 16px;
       display:flex;
       align-items:center;
@@ -201,8 +278,8 @@ html = r"""
       color: #00c8ff;
       font-weight:700;
       background: linear-gradient(90deg, rgba(0,0,0,0.05), rgba(255,255,255,0.02));
-    }
-    .faq-badge {
+    }}
+    .faq-badge {{
       margin-left:auto;
       background:#0bbef3;
       color:#05232e;
@@ -210,99 +287,55 @@ html = r"""
       border-radius:10px;
       font-weight:700;
       font-size:12px;
-    }
-    .chat-body {
+    }}
+    .chat-body {{
       padding: 16px;
       min-height: 140px;
-      max-height: 280px;
+      max-height: 320px;
       overflow:auto;
       display:flex;
       flex-direction:column;
       gap:12px;
-    }
-    .bot-msg {
+    }}
+    .bot-msg {{
       max-width: 86%;
       background: #3b3b3b;
       color: white;
       padding: 10px 12px;
       border-radius: 10px;
       font-size:14px;
-    }
-    .user-msg {
+    }}
+    .user-msg {{
       align-self: flex-end;
       background: linear-gradient(90deg,#00c8ff,#4cc8ff);
       color: #04232a;
       padding: 10px 12px;
       border-radius: 10px;
       font-size:14px;
-    }
-    .chat-input {
+    }}
+    .chat-input {{
       padding: 12px;
       display:flex;
       gap:10px;
       border-top:1px solid rgba(255,255,255,0.02);
       background: linear-gradient(180deg, rgba(0,0,0,0.03), rgba(255,255,255,0.01));
       align-items:center;
-    }
-    .chat-input input[type="text"]{
-      flex:1;
-      padding:10px 12px;
-      border-radius:10px;
-      border: none;
-      outline: none;
-      background:#111;
-      color:#fff;
-      font-size:14px;
-    }
-    .send-btn {
-      background: #00c8ff;
-      color: #05232e;
-      border:none;
-      padding:10px 14px;
-      border-radius:10px;
-      font-weight:700;
-      cursor:pointer;
-    }
+    }}
+    .chat-input input[type="text"]{ flex:1; padding:10px 12px; border-radius:10px; border:none; outline:none; background:#111; color:#fff; font-size:14px; }
+    .send-btn {{ background: #00c8ff; color: #05232e; border:none; padding:10px 14px; border-radius:10px; font-weight:700; cursor:pointer; }}
 
     /* GALLERY / PROJECTS */
-    .section {
-      padding: 36px 0;
-      color: #fff;
-    }
-    .section h2 {
-      font-size:28px;
-      color:#e6d0ff;
-      margin-bottom:14px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
-      gap:18px;
-    }
-    .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius:12px;
-      padding:16px;
-      border:1px solid rgba(255,255,255,0.03);
-    }
+    .section {{ padding: 36px 0; color: #fff; }}
+    .section h2 {{ font-size:28px; color:#e6d0ff; margin-bottom:14px; display:flex; gap:10px; align-items:center; }}
+    .grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:18px; }}
+    .card {{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,0.03); }}
 
-    /* responsive */
-    @media (max-width:900px){
-      .hero { height: auto; padding: 26px; }
-      .hero h1 { font-size: 32px; }
-      .chat-widget { left: 12px; width: 92%; }
-      .leftbar { display:none; }
-    }
+    /* responsive adjustments */
+    @media (max-width:900px){ .hero {{ height:auto; padding:26px }} .hero h1{{ font-size:36px }} .leftbar{{ display:none }} .chat-widget{{ left:12px;width:92% }} }
 
-    /* small UI niceties */
-    a { color: inherit; text-decoration:none; }
   </style>
 </head>
 <body>
-  <!-- stars background layers -->
   <div class="stars"></div>
   <div class="twinkling"></div>
 
@@ -322,33 +355,23 @@ html = r"""
   </div>
 
   <div class="page" id="top">
-    <!-- HERO WRAPPER -->
     <div class="hero-wrap">
       <div class="glow-border" aria-hidden="true"></div>
 
       <div class="hero" role="banner" aria-label="Hero banner">
         <h1>Aryan Sharma</h1>
-
-        <!-- typing lines (roles / about) -->
         <div class="typing-block" id="typingLine"></div>
-
-        <!-- About mini inside hero (will animate lines as well) -->
-        <div class="about-mini" id="aboutMini" aria-live="polite"></div>
+        <div class="about-mini" id="aboutMini"></div>
       </div>
     </div>
 
-    <!-- Gallery Section -->
     <section class="section" id="gallery">
       <h2>📷 Gallery</h2>
       <div class="grid">
-        <div class="card">Photo 1 — replace with your own</div>
-        <div class="card">Photo 2 — replace with your own</div>
-        <div class="card">Photo 3 — replace with your own</div>
-        <div class="card">Photo 4 — replace with your own</div>
+        {gallery_html}
       </div>
     </section>
 
-    <!-- Projects Section -->
     <section class="section" id="projects">
       <h2>🚀 Projects</h2>
       <div class="grid">
@@ -361,15 +384,17 @@ html = r"""
     <footer style="padding:40px 0;text-align:center;color:rgba(255,255,255,0.5)">© 2025 Aryan Sharma</footer>
   </div>
 
-  <!-- Chat widget (matches style you provided) -->
+  <!-- Chat widget -->
   <div class="chat-widget" id="chatWidget" aria-hidden="true" role="dialog" aria-label="Aryan's AI Chatbot">
     <div class="chat-header">
-      <div style="font-weight:800;color:#00c8ff">Aryan's AI Chatbot</div>
+      <div style="font-weight:800;color:#00c8ff;font-size:15px;">
+        Aryan's AI Chatbot<br><span style="color:#a8f2ff;font-size:12px;font-weight:600">Ask me about Aryan</span>
+      </div>
       <div class="faq-badge">FAQ</div>
     </div>
 
     <div class="chat-body" id="chatBody">
-      <div class="bot-msg">Hi! Ask me questions about Aryan.</div>
+      <div class="bot-msg">Ask me about Aryan.</div>
     </div>
 
     <div class="chat-input">
@@ -380,11 +405,7 @@ html = r"""
 
 <script>
   // Smooth scroll helpers
-  function scrollToId(id){
-    const el = document.getElementById(id);
-    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-
+  function scrollToId(id){ const el = document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }
   document.getElementById('homeBtn').addEventListener('click', ()=> scrollToId('top'));
   document.getElementById('galleryBtn').addEventListener('click', ()=> scrollToId('gallery'));
   document.getElementById('chatBtn').addEventListener('click', toggleChat);
@@ -397,13 +418,10 @@ html = r"""
     chatOpen = !chatOpen;
     chatWidget.style.display = chatOpen ? 'block' : 'none';
     chatWidget.setAttribute('aria-hidden', (!chatOpen).toString());
-    if(chatOpen){
-      // focus input after tiny delay
-      setTimeout(()=> document.getElementById('chatInput').focus(), 160);
-    }
+    if(chatOpen) setTimeout(()=> document.getElementById('chatInput').focus(), 160);
   }
 
-  // Simple chat send handler (local prototype)
+  // Simple chat send handler (UI-only)
   const sendBtn = document.getElementById('sendBtn');
   const chatBody = document.getElementById('chatBody');
   const chatInput = document.getElementById('chatInput');
@@ -420,7 +438,6 @@ html = r"""
     if(!val) return;
     appendMsg(val, 'user-msg');
     chatInput.value = '';
-    // fake bot reply (replace with real backend)
     setTimeout(()=> {
       const bot = document.createElement('div');
       bot.className = 'bot-msg';
@@ -429,11 +446,9 @@ html = r"""
       chatBody.scrollTop = chatBody.scrollHeight;
     }, 700);
   });
-  chatInput.addEventListener('keydown', (e)=> {
-    if(e.key === 'Enter') sendBtn.click();
-  });
+  chatInput.addEventListener('keydown', (e)=> { if(e.key === 'Enter') sendBtn.click(); });
 
-  // Typing + deleting animation implementation
+  // Typing + deleting animation
   const roles = [
     "I'm a Web Designer",
     "I'm a Problem Solver",
@@ -441,34 +456,21 @@ html = r"""
     "I'm a Developer",
     "I'm a Writer"
   ];
-
   const aboutLines = [
     "Hi, I'm Aryan Sharma, currently pursuing a Bachelor's Degree.",
     "I'm passionate about coding, learning, and developing new things.",
     "This site showcases my work and lets you chat with my AI assistant to learn more about me."
   ];
 
-  // typist utility
   function typeDelete(element, text, speed=40){
     return new Promise((resolve)=> {
       let i = 0;
       element.textContent = '';
-      const t = setInterval(()=>{
-        element.textContent += text.charAt(i);
-        i++;
-        if(i >= text.length){ clearInterval(t); setTimeout(()=> {
-          resolve();
-        }, 900); }
-      }, speed);
+      const t = setInterval(()=>{ element.textContent += text.charAt(i); i++; if(i >= text.length){ clearInterval(t); setTimeout(()=> { resolve(); }, 900); } }, speed);
     }).then(()=> {
-      // delete
       return new Promise((res)=> {
         let j = element.textContent.length;
-        const d = setInterval(()=>{
-          element.textContent = element.textContent.slice(0, j-1);
-          j--;
-          if(j <= 0){ clearInterval(d); setTimeout(res, 250); }
-        }, 28);
+        const d = setInterval(()=>{ element.textContent = element.textContent.slice(0, j-1); j--; if(j <= 0){ clearInterval(d); setTimeout(res, 250); } }, 28);
       });
     });
   }
@@ -476,45 +478,35 @@ html = r"""
   async function runLoop(){
     const typingEl = document.getElementById('typingLine');
     const aboutEl = document.getElementById('aboutMini');
-
-    // We'll show role lines first, then show about lines (type each, erase)
     while(true){
       for(let r of roles){
         await typeDelete(typingEl, r, 48);
       }
-      // after roles, show about lines one by one (in the about mini box) — type each fully (no immediate delete)
       for(let a of aboutLines){
-        // type into typingLine first small preview
         await typeDelete(typingEl, a, 28);
-        // then set about mini to a (fade effect)
+        // show in the about-mini box
         aboutEl.style.opacity = 0;
         await new Promise(r => setTimeout(r, 220));
         aboutEl.textContent = a;
         aboutEl.style.transition = 'opacity 300ms';
         aboutEl.style.opacity = 1;
         await new Promise(r => setTimeout(r, 1600));
-        // clear typingLine for next
         typingEl.textContent = '';
       }
-      // slight pause before repeating cycle
       await new Promise(r => setTimeout(r, 800));
     }
   }
 
-  // Start the loop when DOM is ready
-  document.addEventListener('DOMContentLoaded', ()=> {
-    runLoop().catch(console.error);
-  });
-  // If DOMContentLoaded has already fired
-  if(document.readyState === 'complete' || document.readyState === 'interactive'){
-    runLoop().catch(()=>{});
-  }
+  document.addEventListener('DOMContentLoaded', ()=> { runLoop().catch(console.error); });
+  if(document.readyState === 'complete' || document.readyState === 'interactive'){ runLoop().catch(()=>{}); }
 
 </script>
-
 </body>
 </html>
 """
 
-# Embed the entire HTML into Streamlit using components.html so JS runs properly
-components.html(html, height=920, scrolling=True)
+# -------------------------
+# Display the site: embed as HTML
+# -------------------------
+# Choose an appropriate height; allow scrolling inside component; use large height so it covers most screens.
+components.html(html_template, height=1200, scrolling=True)
