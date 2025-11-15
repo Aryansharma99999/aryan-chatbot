@@ -1,213 +1,201 @@
-import streamlit as st
-import random
+from flask import Flask, render_template_string
 
-st.set_page_config(page_title="Aryan Sharma", layout="wide")
+app = Flask(__name__)
 
+html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aryan Sharma — Portfolio</title>
 
-# ============================
-#          FIXED CSS
-# ============================
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
-st.markdown("""
 <style>
-
-html, body {
+body {
     margin: 0;
-    padding: 0;
-    background: transparent !important;
-    font-family: 'Poppins', sans-serif;
-}
-
-.stApp {
-    background: radial-gradient(circle at bottom, #2b0a45, #0a0217 70%) !important;
-    color: white !important;
-    overflow-x: hidden !important;
-}
-
-/* Small floating stars */
-.stars {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    pointer-events: none;
-}
-
-.star {
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    background: #ffffff;
-    opacity: 0.7;
-    border-radius: 50%;
-    animation: floatUp 6s linear infinite;
-}
-
-@keyframes floatUp {
-    from { transform: translateY(20px); opacity: 0.7; }
-    to   { transform: translateY(-40px); opacity: 0.2; }
-}
-
-/* Floating Buttons Left */
-.float-btn {
-    position: fixed;
-    left: 30px;
-    width: 55px;
-    height: 55px;
-    border-radius: 50%;
-    border: 3px solid #b24cff;
-    background: rgba(90, 0, 140, 0.35);
-    backdrop-filter: blur(8px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 30;
-    transition: 0.2s;
-}
-.float-btn:hover { transform: scale(1.12); }
-
-#photos-btn { top: 140px; }
-#writings-btn { top: 220px; }
-
-/* Chatbot Floating Button */
-#chatbot-btn {
-    position: fixed;
-    bottom: 30px;
-    left: 30px;
-    padding: 12px 22px;
-    background: rgba(150, 0, 255, 0.45);
-    border: 2px solid #c46aff;
+    font-family: Poppins, sans-serif;
+    background: #0d0017;
     color: white;
-    border-radius: 12px;
-    font-weight: 600;
-    backdrop-filter: blur(8px);
-    cursor: pointer;
-    z-index: 40;
-}
-#chatbot-btn:hover { transform: scale(1.05); }
-
-/* Hero Box */
-.hero-box {
-    width: 90%;
-    margin: auto;
-    margin-top: 120px;
-    padding: 55px;
-    border-radius: 22px;
-    background: rgba(20, 0, 40, 0.65);
-    border: 3px solid #b24cff;
-    backdrop-filter: blur(14px);
+    overflow-x: hidden;
 }
 
-.hero-title {
+/* Animated Gradient Header Box */
+.hero {
+    width: 100%;
+    padding: 80px 20px;
+    text-align: center;
+    border-radius: 20px;
+    background: linear-gradient(120deg, #6d25ff40, #9f4dff40, #d9a7ff40);
+    border: 2px solid #bb77ff40;
+    backdrop-filter: blur(10px);
+    animation: glow 6s infinite linear;
+    margin-bottom: 40px;
+}
+
+@keyframes glow {
+    0% { box-shadow: 0 0 20px #8b3dff; }
+    50% { box-shadow: 0 0 40px #b96dff; }
+    100% { box-shadow: 0 0 20px #8b3dff; }
+}
+
+/* Main Name */
+.hero h1 {
     font-size: 52px;
     font-weight: 700;
-    color: #f8c8ff;
+    margin: 0;
 }
 
-.hero-sub {
-    font-size: 22px;
+/* Rotating Animation Text */
+#typing {
+    font-size: 20px;
     margin-top: 10px;
-    color: #d8b8ff;
-}
-
-.hero-text {
-    font-size: 18px;
-    margin-top: 20px;
-    color: #eee;
-}
-
-.btn {
-    padding: 10px 20px;
-    border-radius: 10px;
-    border: none;
-    background: #b24cff;
-    color: white;
+    color: #d9b7ff;
     font-weight: 600;
-    margin-right: 10px;
-    cursor: pointer;
+    height: 30px;
 }
 
-.btn:hover { background: #d07cff; }
+/* About Section */
+.about {
+    max-width: 900px;
+    margin: auto;
+    padding: 40px 20px;
+    background: #ffffff05;
+    border-radius: 20px;
+    border: 1px solid #ffffff10;
+    backdrop-filter: blur(5px);
+    text-align: center;
+}
 
+.about h2 {
+    font-size: 34px;
+    margin-bottom: 10px;
+    color: #c78fff;
+}
+
+/* Projects Section */
+.projects {
+    max-width: 1100px;
+    margin: auto;
+    padding: 50px 20px;
+}
+
+.projects h2 {
+    font-size: 34px;
+    margin-bottom: 25px;
+    text-align: center;
+    color: #c78fff;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 25px;
+}
+
+.card {
+    background: #ffffff08;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #ffffff15;
+    backdrop-filter: blur(6px);
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px #a86cff40;
+}
+
+.card h3 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #aaaaaa;
+    margin-top: 40px;
+}
 </style>
-""", unsafe_allow_html=True)
+</head>
 
+<body>
 
-# ============================
-#     STARFIELD GENERATOR
-# ============================
-star_html = '<div class="stars">'
-for i in range(140):
-    x = random.randint(0,100)
-    y = random.randint(0,100)
-    delay = random.random()*3
-    star_html += f'<div class="star" style="left:{x}%; top:{y}%; animation-delay:{delay}s;"></div>'
-star_html += '</div>'
-st.markdown(star_html, unsafe_allow_html=True)
-
-
-# ============================
-#     FLOATING BUTTONS
-# ============================
-st.markdown("""
-<div id="photos-btn" class="float-btn">
-    <a href="#photos-section">
-    <img src="https://img.icons8.com/ios-filled/50/ffffff/camera.png" width="26">
-    </a>
+<!-- HERO HEADER WITH ANIMATION -->
+<div class="hero">
+    <h1>Aryan Sharma</h1>
+    <div id="typing"></div>
 </div>
 
-<div id="writings-btn" class="float-btn">
-    <a href="#writings-section">
-    <img src="https://img.icons8.com/ios-filled/50/ffffff/ballpoint-pen.png" width="26">
-    </a>
-</div>
+<!-- ABOUT ME SECTION -->
+<section class="about">
+    <h2>About Me</h2>
+    <p>
+        Hi, I'm <b>Aryan Sharma</b>, currently pursuing a Bachelor's Degree.
+        I'm passionate about coding, learning, and developing new things.
+        This site showcases my work and lets you chat with my AI assistant
+        to learn more about me.
+    </p>
+</section>
 
-<a href="#chatbot-section">
-    <div id="chatbot-btn">Ask Aryan</div>
-</a>
-""", unsafe_allow_html=True)
+<!-- PROJECTS -->
+<section class="projects">
+    <h2>Projects</h2>
 
+    <div class="grid">
+        <div class="card">
+            <h3>Chatbot Website</h3>
+            <p>A chatbot-enabled website with modern UI and smooth workflows.</p>
+        </div>
 
-# ============================
-#         HERO SECTION
-# ============================
+        <div class="card">
+            <h3>Portfolio Builder</h3>
+            <p>A tool that helps users generate their own portfolios instantly.</p>
+        </div>
 
-st.markdown('<div class="hero-box">', unsafe_allow_html=True)
+        <div class="card">
+            <h3>AI Experiments</h3>
+            <p>Small AI projects exploring prompts, automation & creativity.</p>
+        </div>
+    </div>
+</section>
 
-st.markdown("""
-<div class="hero-title">Aryan Sharma</div>
-<div class="hero-sub">I'm a developer, writer, editor & learner.</div>
+<footer>
+    © 2025 Aryan Sharma — All Rights Reserved
+</footer>
 
-<p class="hero-text">
-Welcome to my personal website — explore projects, photos, writings,
-and chat with my AI assistant.
-</p>
+<!-- ROTATING TEXT SCRIPT -->
+<script>
+const roles = [
+    "I'm a Web Designer",
+    "I'm a Problem Solver",
+    "I'm a Tech Enthusiast",
+    "I'm a Developer",
+    "I'm a Writer"
+];
 
-<br>
+let i = 0;
+let typingDiv = document.getElementById("typing");
 
-<a href="https://github.com/aryanxsharma26">
-<button class="btn">GH</button></a>
+function rotateText() {
+    typingDiv.innerHTML = roles[i];
+    i = (i + 1) % roles.length;
+}
 
-<a href="https://instagram.com/Aryansharma99999">
-<button class="btn">IG</button></a>
+rotateText();
+setInterval(rotateText, 2000);
+</script>
 
-""", unsafe_allow_html=True)
+</body>
+</html>
+"""
 
-st.markdown('</div>', unsafe_allow_html=True)
+@app.route("/")
+def home():
+    return render_template_string(html)
 
-
-# ============================
-#   Placeholder sections
-# ============================
-
-st.markdown("<h2 id='photos-section'>📸 Photos Section</h2>", unsafe_allow_html=True)
-st.write("Your photos will appear here...")
-
-st.markdown("<h2 id='writings-section'>✍️ Writings Section</h2>", unsafe_allow_html=True)
-st.write("Your writings will appear here...")
-
-st.markdown("<h2 id='chatbot-section'>🤖 Chatbot</h2>", unsafe_allow_html=True)
-st.write("Chatbot UI coming next...")
-
+if __name__ == "__main__":
+    app.run(debug=True)
