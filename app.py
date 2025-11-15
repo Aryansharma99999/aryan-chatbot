@@ -1,3 +1,48 @@
+st.markdown("""
+<style>
+
+/* REMOVE ALL Streamlit CONTAINER LIMITS */
+.block-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* REMOVE TOP WHITE SPACE */
+.css-18ni7ap, .e1fqkh3o3, .css-1avcm0n {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* REMOVE BODY WHITE BORDERS */
+html, body, [data-testid="stAppViewContainer"], .main {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* FORCE APP TO FULL WIDTH AND HEIGHT */
+[data-testid="stAppViewContainer"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+[data-testid="stToolbar"] {
+    display: none !important;
+}
+
+/* FORCE IFRAME TO FULL SIZE */
+iframe {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
 # FULL FINAL app.py
 # (Complete working file with fullscreen, animation, gallery, admin panel, chatbox)
 # Paste into your Streamlit app directly.
