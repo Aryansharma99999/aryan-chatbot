@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_lottie import st_lottie
 import json
 import time
 
@@ -18,6 +17,7 @@ html, body, [class*="css"] {
 }
 
 # -------- STARFIELD BACKGROUND --------
+
 body::before {
     content: "";
     position: fixed;
