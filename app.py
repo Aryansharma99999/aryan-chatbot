@@ -1,5 +1,4 @@
-# app.py — Premium Portfolio + Floating Chatbot
-
+# app.py — Final premium "FAANG-style mix" (Hero from preview + Gallery C3 + Chatbot A)
 import os
 import re
 import time
@@ -8,41 +7,52 @@ import streamlit as st
 from markdown import markdown
 import streamlit.components.v1 as components
 
+# Page config
 st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
-# ---------- Helper Paths ----------
+# ---------- Helper paths & utilities ----------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
 def get_gallery_images():
+    """Return list of image file paths from gallery folder (sorted)."""
     if not os.path.exists(GALLERY_DIR):
         return []
-    files = [f for f in os.listdir(GALLERY_DIR) 
-             if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
+    files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
     files.sort()
     return [os.path.join(GALLERY_DIR, f) for f in files]
 
+def to_base64(path):
+    """Return data URL (base64) for given image path. Returns None on error."""
+    try:
+        with open(path, "rb") as fh:
+            data = base64.b64encode(fh.read()).decode("utf-8")
+        ext = os.path.splitext(path)[1].lower().replace(".", "")
+        # fallback ext mapping
+        if ext == "jpg": ext = "jpeg"
+        return f"data:image/{ext};base64,{data}"
+    except Exception:
+        return None
+
 def get_post_data(slug):
+    """Parse a markdown post with optional YAML-like meta at top."""
     file_path = os.path.join(POSTS_DIR, f"{slug}.md")
     if not os.path.exists(file_path):
         return None
-
     with open(file_path, "r", encoding="utf-8") as fh:
         content = fh.read()
-
     meta = {}
     body = content
     meta_match = re.match(r'---\n(.*?)\n---', content, re.DOTALL)
     if meta_match:
-        for line in meta_match.group(1).splitlines():
+        meta_block = meta_match.group(1)
+        for line in meta_block.splitlines():
             if ":" in line:
                 k, v = line.split(":", 1)
                 meta[k.strip()] = v.strip()
         body = content[meta_match.end():].strip()
-
     html = markdown(body)
-
     return {
         "slug": slug,
         "title": meta.get("title", slug.replace("-", " ").title()),
@@ -53,532 +63,397 @@ def get_post_data(slug):
     }
 
 def get_all_posts():
+    """Return list of parsed posts (dicts)."""
     if not os.path.exists(POSTS_DIR):
         return []
+    md_files = [f for f in os.listdir(POSTS_DIR) if f.endswith(".md")]
     posts = []
-    for file in os.listdir(POSTS_DIR):
-        if file.endswith(".md"):
-            slug = file[:-3]
-            data = get_post_data(slug)
-            if data:
-                posts.append(data)
+    for m in md_files:
+        slug = m[:-3]
+        data = get_post_data(slug)
+        if data:
+            posts.append(data)
     return posts
 
-# ---------- HERO SECTION (C3 style) ----------
-hero_html = """
+# ---------- HERO (FAANG-like pastel, Sora font style) ----------
+hero_html = '''
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg1: #fbe9f9;
-  --bg2: #eaf6ff;
-  --bg3: #f7f0ff;
-  --card: rgba(255,255,255,0.7);
+  --p1:#fbe9f9; --p2:#eaf6ff; --p3:#f7f0ff;
   --accent: #7b44e5;
+  --card: rgba(255,255,255,0.74);
 }
-html,body{
-  margin:0; padding:0; font-family:'Inter',sans-serif; background:transparent;
-}
-
-.hero-wrap{
-  position:relative;
-  width:100%;
-  min-height:92vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:linear-gradient(180deg,var(--bg2),var(--bg3),var(--bg1));
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0;background:transparent;font-family:'Sora',system-ui,Arial,sans-serif;}
+.hero-stage{
+  position:relative; min-height:78vh; display:flex; align-items:center; justify-content:center;
+  padding:48px;
+  background: linear-gradient(180deg,var(--p2),var(--p3),var(--p1));
   overflow:hidden;
 }
-
-/* floating pastel blobs */
-.blob{
-  position:absolute;
-  width:500px;
-  height:400px;
-  filter:blur(60px);
-  opacity:0.6;
-  animation:float 12s infinite ease-in-out;
-}
-@keyframes float{
-  0%{transform:translateY(0px);}
-  50%{transform:translateY(40px);}
-  100%{transform:translateY(0px);}
-}
-.b1{left:-120px; top:-80px; background:#ffd6eb;}
-.b2{right:-140px; top:20px; background:#e8f0ff;}
-.b3{left:10%; bottom:-80px; background:#fff2ec;}
+.blob{ position:absolute; filter:blur(56px); opacity:.85; transform:translate3d(0,0,0); border-radius:50%; }
+.b1{ width:640px; height:520px; left:-140px; top:-100px; background:linear-gradient(90deg,#ffdbe9,#eaf6ff);}
+.b2{ width:500px; height:420px; right:-160px; top:30px; background:linear-gradient(90deg,#f6ecff,#e7f8ff);}
+.b3{ width:380px; height:320px; left:12%; bottom:-120px; background:linear-gradient(90deg,#fff2ec,#f9f0ff);}
 
 .hero-card{
-  width:86%;
-  max-width:1100px;
-  background:var(--card);
-  backdrop-filter:blur(14px);
-  border-radius:28px;
-  padding:48px;
-  box-shadow:0 25px 60px rgba(0,0,0,0.08);
-  transform-style:preserve-3d;
+  width:92%; max-width:1200px; border-radius:22px; padding:48px; background:var(--card);
+  border:1px solid rgba(255,255,255,0.7); box-shadow: 0 40px 100px rgba(6,6,8,0.06);
+  backdrop-filter: blur(12px) saturate(120%);
+  transform-style:preserve-3d; transition: transform 0.12s ease-out;
+  position:relative;
 }
-.hero-title{
-  font-size:48px;
-  font-weight:800;
-  margin:0;
-  color:#101014;
+
+.hero-grid{ display:flex; gap:28px; align-items:flex-start; }
+.left {
+  flex:1 1 60%;
 }
-.tag{
-  display:inline-block;
-  margin-top:12px;
-  padding:8px 16px;
-  border-radius:999px;
-  background:rgba(123,68,229,0.14);
-  color:var(--accent);
-  font-weight:700;
-}
-.btn{
-  padding:14px 24px;
-  border:none;
-  border-radius:999px;
-  margin-top:22px;
-  margin-right:10px;
-  font-weight:700;
-  cursor:pointer;
-  background:linear-gradient(90deg,#ffd6eb,#dfe9ff);
-}
-.btn-ghost{
-  padding:14px 24px;
-  background:white;
-  border-radius:999px;
-  border:1px solid #ccc;
-  margin-top:22px;
+.hi { margin:0; color:#6b6f77; font-weight:600; }
+.title { margin:6px 0 0 0; font-size:56px; font-weight:800; color:#0f1113; letter-spacing:-0.6px; }
+.lead { margin-top:12px; color:#404345; font-size:18px; max-width:84%; line-height:1.45; }
+.role-pill { display:inline-block; margin-top:14px; padding:10px 16px; border-radius:999px; background:linear-gradient(90deg, rgba(123,68,229,0.12), rgba(123,68,229,0.06)); color:var(--accent); font-weight:700; }
+
+.actions{ margin-top:24px; display:flex; gap:12px; align-items:center; }
+.btn { padding:12px 20px; border-radius:999px; border:none; cursor:pointer; font-weight:700; background:linear-gradient(90deg,#ffd6eb,#dfe9ff); }
+.ghost { padding:12px 20px; border-radius:999px; background:transparent; border:1px solid rgba(0,0,0,0.06); }
+
+.right-previews{ width:260px; display:flex; gap:12px; flex-direction:column; align-items:flex-end; transform: translateZ(40px); }
+.preview-card{ width:84px; height:84px; border-radius:12px; overflow:hidden; background:linear-gradient(180deg,rgba(255,255,255,0.8),rgba(255,255,255,0.6)); box-shadow: 0 18px 36px rgba(8,10,16,0.06); border:1px solid rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; }
+.preview-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+@media (max-width:980px){
+  .hero-grid{ flex-direction:column; }
+  .right-previews{ display:none; }
+  .title{ font-size:36px; }
+  .hero-card{ padding:28px; border-radius:18px; }
 }
 </style>
 </head>
-
 <body>
-<div class="hero-wrap" id="hero">
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
-  <div class="blob b3"></div>
+  <div class="hero-stage" id="heroStage">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
 
-  <div class="hero-card" id="heroCard">
-    <p style="margin:0;font-weight:600;color:#444;">Hello, I'm</p>
-    <h1 class="hero-title">Aryan Sharma</h1>
-    <p style="font-size:20px;color:#444;margin-top:10px;">
-      I turn everyday life into little stories—coffee-powered, curious, and always building.
-    </p>
+    <div class="hero-card" id="heroCard">
+      <div class="hero-grid">
+        <div class="left">
+          <p class="hi">Hello, I'm</p>
+          <h1 class="title">Aryan Sharma</h1>
+          <p class="lead">I turn everyday life into little stories—coffee-powered, curious, and always building.</p>
+          <div class="role-pill" id="roleField">Creative Storyteller</div>
 
-    <div class="tag" id="role">Creative Storyteller</div>
+          <div class="actions">
+            <button class="btn" onclick="location.href='#projects'">View Projects</button>
+            <button class="ghost" onclick="location.href='#contact'">Contact</button>
+          </div>
+        </div>
 
-    <div>
-      <button class="btn" onclick="location.href='#projects'">View Projects</button>
-      <button class="btn-ghost" onclick="location.href='#contact'">Contact</button>
+        <div class="right-previews" aria-hidden="true">
+          <div class="preview-card"><img id="p1" src=""></div>
+          <div class="preview-card"><img id="p2" src=""></div>
+          <div class="preview-card"><img id="p3" src=""></div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
 <script>
-// typewriter
-const roles = ["Creative Storyteller","Tech Enthusiast","AI Learner","Coffee-Powered Human"];
-let r=0, pos=0, fw=true;
-const el=document.getElementById("role");
-
-function tw(){
-  let t = roles[r];
-  if(fw){
-    pos++;
-    if(pos===t.length){fw=false; setTimeout(tw,800); return;}
+/* typewriter */
+const roles = ["Creative Storyteller","Tech Enthusiast","AI Learner","Coffee-Powered Human ☕"];
+let ridx = 0, rpos = 0, rfor = true;
+const roleEl = document.getElementById("roleField");
+function typeTick(){
+  const cur = roles[ridx];
+  if (rfor){
+    rpos++;
+    roleEl.textContent = cur.slice(0,rpos);
+    if (rpos === cur.length){ rfor = false; setTimeout(typeTick,900); return; }
   } else {
-    pos--;
-    if(pos===0){fw=true; r=(r+1)%roles.length; setTimeout(tw,400); return;}
+    rpos--;
+    roleEl.textContent = cur.slice(0,rpos);
+    if (rpos === 0){ rfor = true; ridx = (ridx+1)%roles.length; setTimeout(typeTick,400); return; }
   }
-  el.textContent = t.slice(0,pos);
-  setTimeout(tw,60);
+  setTimeout(typeTick,60);
 }
-tw();
+typeTick();
 
-// parallax
-document.addEventListener("mousemove", e=>{
-  let x=(window.innerWidth/2 - e.clientX)/40;
-  let y=(window.innerHeight/2 - e.clientY)/40;
-  document.getElementById("heroCard").style.transform=
-    `perspective(900px) rotateY(${x}deg) rotateX(${y}deg)`;
+/* parallax */
+const hero = document.getElementById("heroCard");
+document.addEventListener("mousemove", (e) => {
+  const x = (window.innerWidth/2 - e.clientX)/40;
+  const y = (window.innerHeight/2 - e.clientY)/40;
+  hero.style.transform = `perspective(900px) rotateY(${x}deg) rotateX(${y}deg)`;
 });
 </script>
-
 </body>
 </html>
-"""
-
+'''
+# Render hero
 components.html(hero_html, height=760, scrolling=False)
 
-# ---------- Global Streamlit Soft Theme ----------
+# ---------- Inject hero preview images (first 3 gallery images) ----------
+images = get_gallery_images()  # gather images here once for reuse
+
+# build small JS injection to populate p1/p2/p3 or hide if missing
+inject_parts = []
+for i in range(3):
+    if i < len(images):
+        data = to_base64(images[i])
+        if data:
+            inject_parts.append(f"document.getElementById('p{i+1}').src = '{data}';")
+        else:
+            inject_parts.append(f"document.getElementById('p{i+1}').style.display='none';")
+    else:
+        inject_parts.append(f"document.getElementById('p{i+1}').style.display='none';")
+
+inject_js = "<script>" + "".join(inject_parts) + "</script>"
+st.markdown(inject_js, unsafe_allow_html=True)
+
+# ---------- Global Streamlit CSS (theme consistency) ----------
 st.markdown("""
 <style>
+/* make Streamlit app background match hero */
 .stApp {
-    background: linear-gradient(180deg, rgba(234,246,255,0.96), rgba(247,240,255,0.97)) !important;
+  background: linear-gradient(180deg, rgba(234,246,255,0.95), rgba(247,240,255,0.96)) !important;
+  color: #111;
 }
+/* glassy cards behavior */
+.stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
+  background: rgba(255,255,255,0.78) !important;
+  border: 1px solid rgba(255,255,255,0.66);
+  box-shadow: 0 12px 30px rgba(12,12,18,0.04);
+  backdrop-filter: blur(8px) !important;
+}
+/* headings */
+.css-10trblm.egzxvld1 { color:#18181b; }
+.stMarkdown { color:#222; }
+a { color: #7b44e5 !important; }
+/* ensure gallery grid classes used in injected html are visible */
+.gallery-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:18px; align-items:start; }
+.gallery-item { border-radius:14px; overflow:hidden; box-shadow: 0 10px 30px rgba(16,18,26,0.06); transition: transform .25s ease, box-shadow .25s ease; background: white;}
+.gallery-item img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .45s ease; }
+.gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(16,18,26,0.09); }
+.gallery-item:hover img { transform: scale(1.06); }
 </style>
 """, unsafe_allow_html=True)
-# ---------- GALLERY SECTION ----------
-import base64
 
-images = get_gallery_images()
+# ---------- Content area: Writings & Projects ----------
+st.markdown("---")
+st.header("Writings & Projects")
+st.subheader("Latest Writings")
+posts = get_all_posts()
+if not posts:
+    st.info("No blog posts found. Add `.md` files to the blog_posts/ folder.")
+else:
+    for p in posts:
+        st.subheader(p["title"])
+        if p.get("date"):
+            st.caption(p["date"])
+        st.markdown(p["html"], unsafe_allow_html=True)
+        st.markdown("---")
 
-def to_base64(path):
-    try:
-        with open(path, "rb") as f:
-            data = base64.b64encode(f.read()).decode()
-        ext = os.path.splitext(path)[1].replace(".", "")
-        return f"data:image/{ext};base64,{data}"
-    except:
-        return None
+st.subheader("Projects")
+st.markdown("""
+- Chatbot Website (this site)  
+- Portfolio Builder  
+- AI Experiments  
+(Add more project details in code or link to GitHub.)
+""")
 
-if images:
+st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
+st.header("Contact")
+st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryansharmax26)")
+
+# ---------- PART 2: Gallery Section (C3) ----------
+st.markdown("---")
+st.markdown("<a id='gallery'></a>", unsafe_allow_html=True)
+st.header("Gallery")
+if not images:
+    st.info("No gallery images found. Add images (jpg, png, webp) to the `gallery/` folder.")
+else:
+    # build gallery html (base64 embedded)
     gallery_items = []
-    for img in images:
-        b64 = to_base64(img)
+    for p in images:
+        b64 = to_base64(p)
         if not b64:
             continue
-        name = os.path.basename(img)
-
-        gallery_items.append(f"""
-            <div class="g-item" onclick="openLightbox('{b64}')">
-                <img src="{b64}" loading="lazy" alt="{name}">
+        nm = os.path.basename(p)
+        gallery_items.append(f'''
+            <div class="gallery-item" onclick="openLightbox('{b64}')">
+                <img src="{b64}" alt="{nm}" loading="lazy"/>
             </div>
-        """)
+        ''')
+    gallery_html = """
+    <div style="padding:10px 14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <h2 style="margin:6px 0 10px 6px; color:#2b2b2f;">Photographs</h2>
+        <div style="color:#6b6f77; font-weight:600; font-size:14px;">Click an image to view</div>
+      </div>
 
-    gallery_html = f"""
-    <style>
-        .g-grid {{
-            display:grid;
-            grid-template-columns:repeat(auto-fill, minmax(200px,1fr));
-            gap:20px;
-            padding:20px 10px;
-        }}
-        .g-item {{
-            border-radius:16px;
-            overflow:hidden;
-            background:white;
-            box-shadow:0 10px 25px rgba(0,0,0,0.08);
-            transition:0.25s ease;
-            cursor:pointer;
-        }}
-        .g-item:hover {{
-            transform:translateY(-6px);
-            box-shadow:0 20px 40px rgba(0,0,0,0.12);
-        }}
-        .g-item img {{
-            width:100%; height:100%; object-fit:cover;
-            transition:0.35s ease;
-        }}
-        .g-item:hover img {{
-            transform:scale(1.06);
-        }}
-
-        /* LIGHTBOX */
-        #lb {{
-            display:none;
-            position:fixed;
-            inset:0;
-            z-index:999999;
-            background:rgba(0,0,0,0.6);
-            backdrop-filter:blur(4px);
-            justify-content:center;
-            align-items:center;
-        }}
-        #lb img {{
-            max-width:90%;
-            max-height:90%;
-            border-radius:14px;
-            box-shadow:0 25px 70px rgba(0,0,0,0.6);
-        }}
-        #lb button {{
-            position:absolute;
-            top:30px; right:40px;
-            padding:8px 14px;
-            border:none;
-            font-size:22px;
-            border-radius:8px;
-            cursor:pointer;
-        }}
-    </style>
-
-    <h2 style="padding-left:10px; padding-top:10px;">My Gallery</h2>
-    <div class="g-grid">
-        {''.join(gallery_items)}
+      <div style="padding-top:6px;" class="gallery-grid">
+    """ + "".join(gallery_items) + """
+      </div>
     </div>
 
-    <div id="lb">
-      <img id="lb-img" src="">
-      <button onclick="closeLightbox()">✕</button>
+    <!-- Lightbox -->
+    <div id="ps-lightbox" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background: rgba(8,10,14,0.6);">
+      <div style="position:relative; max-width:92%; max-height:92%; display:flex; align-items:center; justify-content:center;">
+        <img id="pslb-img" src="" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow: 0 30px 90px rgba(0,0,0,0.6);" />
+        <button onclick="closeLightbox()" style="position:absolute; right:-10px; top:-10px; background:#fff; border-radius:999px; border:none; padding:8px 10px; cursor:pointer; font-weight:700;">✕</button>
+      </div>
     </div>
 
     <script>
-        function openLightbox(src) {{
-            document.getElementById("lb-img").src = src;
-            document.getElementById("lb").style.display = "flex";
-        }}
-        function closeLightbox() {{
-            document.getElementById("lb").style.display = "none";
-        }}
-        document.addEventListener("keydown", e => {{
-            if(e.key === "Escape") closeLightbox();
-        }});
+      function openLightbox(src){
+        const lb = document.getElementById('ps-lightbox');
+        const img = document.getElementById('pslb-img');
+        img.src = src;
+        lb.style.display = 'flex';
+        lb.style.opacity = 0;
+        requestAnimationFrame(()=>{ lb.style.transition = 'opacity 220ms ease'; lb.style.opacity = 1; });
+      }
+      function closeLightbox(){
+        const lb = document.getElementById('ps-lightbox');
+        lb.style.opacity = 0;
+        setTimeout(()=>{ lb.style.display = 'none'; }, 220);
+      }
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape') closeLightbox();
+      });
     </script>
     """
-
     st.markdown(gallery_html, unsafe_allow_html=True)
-else:
-    st.info("No images found in gallery — upload images to /gallery folder.")
 
-
-# ---------- BLOG / WRITINGS ----------
-st.markdown("---")
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.markdown("### 📸 Gallery (Preview)")
-    if not images:
-        st.info("No images found. Add images to the `gallery/` folder.")
-    else:
-        for i, img in enumerate(images):
-            st.image(img, width=200)
-            if i >= 3:
-                break
-        if len(images) > 4:
-            st.caption(f"+ {len(images)-4} more in the main gallery.")
-
-with col2:
-    st.markdown("### ✍️ Writings")
-    posts = get_all_posts()
-    if not posts:
-        st.info("No blog posts found. Add `.md` files to blog_posts/.")
-    else:
-        for p in posts:
-            st.subheader(p["title"])
-            st.caption(p["date"])
-            st.markdown(p["html"], unsafe_allow_html=True)
-            st.markdown("---")
-# ---------- PREMIUM FLOATING CHATBOT ----------
-chat_html = """
+# ---------- PART 3: Premium Soft Pastel Chatbot (Style A, Fade + Slide) ----------
+chat_html = '''
 <style>
-/* Chat Bubble */
-#chat-float {
-    position: fixed;
-    bottom: 28px;
-    right: 26px;
-    z-index: 99999;
+#aryan-chat-float { position: fixed; right: 28px; bottom: 28px; z-index: 999999; font-family: 'Sora', sans-serif; }
+#aryan-chat-btn {
+    width:72px; height:72px; border-radius:50%; border:none; cursor:pointer;
+    background: linear-gradient(180deg,#ffeef8,#eaf6ff);
+    box-shadow: 0 20px 50px rgba(6,8,12,0.12); font-size:15px; font-weight:700; padding:8px;
+    transition: transform .22s ease, box-shadow .22s ease;
 }
-#chat-btn {
-    width: 68px; height: 68px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    background: linear-gradient(145deg, #fde8ff, #e8f2ff);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-    font-size: 30px;
-    transition: 0.25s ease;
-}
-#chat-btn:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 18px 40px rgba(0,0,0,0.14);
-}
+#aryan-chat-btn:hover { transform: translateY(-6px); box-shadow: 0 28px 70px rgba(6,8,12,0.16); }
 
-/* Chat Window */
-#chat-window {
-    position: fixed;
-    bottom: 110px;
-    right: 26px;
-    width: 360px;
-    max-width: 92vw;
-    display: none;
-    z-index: 999999;
-    background: rgba(255,255,255,0.9);
-    border-radius: 16px;
-    box-shadow: 0 25px 50px rgba(0,0,0,0.14);
-    backdrop-filter: blur(10px);
-    overflow: hidden;
-    animation: fadeIn 0.25s ease;
+/* Chat window */
+#aryan-chat-box {
+    position: fixed; right: 28px; bottom: 110px; width: 380px; max-width:92vw; display:none; z-index:1000000;
+    border-radius:14px; overflow:hidden; box-shadow: 0 30px 90px rgba(6,8,12,0.28);
+    background: linear-gradient(180deg,#071217,#0a0f12); color:#dff6ff;
+    transform-origin: bottom right; transition: all 260ms cubic-bezier(.2,.9,.2,1);
 }
+#aryan-chat-head { padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-weight:800; color:#bfefff; background:linear-gradient(90deg,#061014,#081218); }
+#aryan-chat-body { max-height:300px; overflow:auto; padding:12px; background:linear-gradient(180deg,#071014,#071116); }
+.chat-msg { margin:8px 0; padding:10px 12px; border-radius:10px; max-width:82%; white-space:pre-wrap; font-size:14px; }
+.chat-user { background:white; color:#071018; margin-left:18%; }
+.chat-bot { background:linear-gradient(90deg,#0f1720,#0b1114); color:#dff9ff; margin-right:18%; }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; }
-}
+/* input area */
+#aryan-chat-input-wrap { display:flex; gap:8px; padding:12px; background:#071014; }
+#aryan-chat-input { flex:1; padding:10px; border-radius:8px; border:none; background:#0f1416; color:#dbefff; }
+#aryan-chat-send { padding:10px 12px; border-radius:8px; border:none; background:linear-gradient(90deg,#ffd6eb,#dfe9ff); color:#14121a; font-weight:800; cursor:pointer; }
 
-/* Chat Header */
-#chat-header {
-    padding: 12px 16px;
-    background: linear-gradient(145deg, #0c1116, #0f1419);
-    color: #d7ecff;
-    font-size: 17px;
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-#chat-close {
-    background: transparent;
-    border: none;
-    color: #d7ecff;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-/* Messages */
-#chat-messages {
-    max-height: 260px;
-    overflow-y: auto;
-    padding: 12px;
-    background: linear-gradient(180deg, #0c0f12, #111418);
-}
-.message {
-    margin: 8px 0;
-    padding: 10px 12px;
-    border-radius: 10px;
-    font-size: 14px;
-    max-width: 80%;
-    white-space: pre-wrap;
-}
-.msg-bot {
-    background: linear-gradient(145deg, #11171d, #0c1115);
-    color: #d5f1ff;
-    margin-right: 20%;
-}
-.msg-user {
-    background: white;
-    color: #1a1a1a;
-    margin-left: 20%;
-}
-
-/* Input */
-#chat-input-area {
-    display: flex;
-    gap: 8px;
-    padding: 12px;
-    background: #f6f6ff;
-}
-#chat-input {
-    flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    border: none;
-    background: #ffffff;
-}
-#chat-send {
-    padding: 10px 14px;
-    background: #7b44e5;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 700;
-}
-#chat-send:hover {
-    opacity: 0.9;
+/* small responsiveness */
+@media (max-width:480px){
+  #aryan-chat-box { right: 12px; left:12px; width: auto; bottom: 90px; }
+  #aryan-chat-btn { width:58px; height:58px; font-size:14px; }
 }
 </style>
 
-<div id="chat-float">
-  <button id="chat-btn">💬</button>
-</div>
+<div id="aryan-chat-float">
+  <button id="aryan-chat-btn" aria-label="Ask me about Aryan">Ask me about Aryan ☕</button>
 
-<div id="chat-window">
-  <div id="chat-header">
-    Ask me about Aryan ☕
-    <button id="chat-close">✕</button>
-  </div>
-  <div id="chat-messages"></div>
-  <div id="chat-input-area">
-      <input id="chat-input" placeholder="Ask something..." />
-      <button id="chat-send">Send</button>
+  <div id="aryan-chat-box" role="dialog" aria-label="Aryan chatbot">
+    <div id="aryan-chat-head">
+      <div>Ask me about Aryan ☕</div>
+      <div><button id="aryan-chat-close" style="background:transparent;border:none;color:#bfefff;font-weight:800;cursor:pointer;">✕</button></div>
+    </div>
+
+    <div id="aryan-chat-body" aria-live="polite"></div>
+
+    <div id="aryan-chat-input-wrap">
+      <input id="aryan-chat-input" placeholder="Type a question..." />
+      <button id="aryan-chat-send">Send</button>
+    </div>
   </div>
 </div>
 
 <script>
-const chatBtn = document.getElementById("chat-btn");
-const chatWindow = document.getElementById("chat-window");
-const chatClose = document.getElementById("chat-close");
-const msgArea = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const chatSend = document.getElementById("chat-send");
+(function(){
+  const facts = {
+    "who is aryan":"Aryan is someone who turns everyday moments into little stories—coffee-powered and curious.",
+    "what is aryan studying":"Pursuing a Bachelor's degree. 🎓",
+    "coffee":"Coffee ☕ is essential — without it he's basically on airplane mode.",
+    "travel":"Yes — especially trips that end with coffee and mountain views.",
+    "vibe":"Chill, creative, and always ready for a laugh."
+  };
 
-chatBtn.onclick = () => {
-    chatWindow.style.display = "block";
-    if (!msgArea.hasChildNodes()) addBot("Hey! Ask me anything about Aryan ☕");
-    chatInput.focus();
-};
-chatClose.onclick = () => chatWindow.style.display = "none";
+  const btn = document.getElementById('aryan-chat-btn');
+  const box = document.getElementById('aryan-chat-box');
+  const closeBtn = document.getElementById('aryan-chat-close');
+  const body = document.getElementById('aryan-chat-body');
+  const input = document.getElementById('aryan-chat-input');
+  const send = document.getElementById('aryan-chat-send');
 
-function addBot(text) {
-    const el = document.createElement("div");
-    el.className = "message msg-bot";
+  function addMessage(text, who){
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + (who==='user'?'chat-user':'chat-bot');
     el.textContent = text;
-    msgArea.appendChild(el);
-    msgArea.scrollTop = msgArea.scrollHeight;
-}
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
+  }
 
-function addUser(text) {
-    const el = document.createElement("div");
-    el.className = "message msg-user";
-    el.textContent = text;
-    msgArea.appendChild(el);
-    msgArea.scrollTop = msgArea.scrollHeight;
-}
-
-const answers = {
-    "who is aryan": "Aryan is someone who turns normal moments into little stories—coffee-powered and unintentionally funny.",
-    "what is aryan studying": "He is pursuing his Bachelor's degree 🎓.",
-    "does aryan drink coffee": "Coffee isn't a drink—it's his superpower ☕.",
-    "does aryan like travelling": "Yes! But only if the destination includes mountains + coffee.",
-    "what is aryan good at": "Storytelling, tech, and making people laugh without trying.",
-    "what makes aryan unique": "His vibe + humour + the way he observes life.",
-    "what motivates aryan": "New ideas, creativity, music, and good coffee.",
-    "what is aryan learning": "Tech, AI, creativity… one cup at a time.",
-};
-
-function reply(msg) {
-    let q = msg.toLowerCase();
-    for (let key in answers) {
-        if (q.includes(key)) return answers[key];
+  function replyTo(q){
+    const t = q.toLowerCase();
+    for (let k in facts){
+      if (t.includes(k)) return facts[k];
     }
-    if (q.includes("name")) return "Aryan Sharma — the guy who mixes creativity + logic.";
-    if (q.includes("coffee")) return "Coffee is basically his personality trait ☕";
+    if (t.includes('name')) return "Aryan Sharma — storyteller, coder, coffee-lover.";
+    if (t.includes('study') || t.includes('studying')) return facts["what is aryan studying"];
+    if (t.includes('coffee')) return facts["coffee"];
     return "Ask me anything about Aryan ☕🙂";
-}
+  }
 
-chatSend.onclick = () => sendMsg();
-chatInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") sendMsg();
-});
+  function openBox(){
+    box.style.display = 'block';
+    // animate in
+    requestAnimationFrame(()=>{ box.style.opacity=1; box.style.transform='translateY(0)'; });
+    if (!body.hasChildNodes()) addMessage("Hi! Ask me about Aryan ☕", 'bot');
+    input.focus();
+  }
+  function closeBox(){
+    box.style.opacity = 0;
+    box.style.transform = 'translateY(8px)';
+    setTimeout(()=>{ box.style.display='none'; }, 260);
+  }
 
-function sendMsg() {
-    let text = chatInput.value.trim();
-    if (!text) return;
-    addUser(text);
-    chatInput.value = "";
-    setTimeout(() => {
-        addBot(reply(text));
-    }, 300);
-}
+  btn.addEventListener('click', ()=>{
+    if (box.style.display === 'block') closeBox(); else openBox();
+  });
+  closeBtn.addEventListener('click', closeBox);
+
+  function sendMsg(){
+    const txt = input.value.trim();
+    if (!txt) return;
+    addMessage(txt, 'user');
+    input.value = '';
+    setTimeout(()=>{ addMessage(replyTo(txt), 'bot'); }, 300 + Math.random()*300);
+  }
+  send.addEventListener('click', sendMsg);
+  input.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); sendMsg(); } });
+})();
 </script>
-"""
-
+'''
 components.html(chat_html, height=10, scrolling=False)
 
-
-# ---------- FOOTER ----------
+# ---------- Footer ----------
 st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align:center; opacity:0.7; padding:18px 0;'>
-        Made with ☕ by Aryan Sharma
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.markdown(f"<div style='text-align:center; opacity:0.75; padding:18px 0;'>© {time.strftime('%Y')} Aryan Sharma — Built with ☕</div>", unsafe_allow_html=True)
