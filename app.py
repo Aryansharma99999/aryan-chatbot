@@ -8,7 +8,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
-# ---------- Helper: BLOG & GALLERY ----------
+# ---------------- Helpers: gallery & blog ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
@@ -58,7 +58,7 @@ def get_all_posts():
             posts.append(data)
     return posts
 
-# ---------- Chatbot knowledge (Python copy) ----------
+# ---------------- Aryan facts (chatbot brain) ----------------
 aryan_facts = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -82,321 +82,418 @@ aryan_facts = {
     "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
 }
 
-# ---------- Full-screen themed hero + popup chat (rendered via components.html) ----------
-hero_html = """
+# ---------------- Premium Galaxy hero + dynamic chatbot (component) ----------------
+hero_html = r"""
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg1:#ff6fb5; /* pink */
-    --bg2:#845ef7; /* purple */
-    --bg3:#7ad3ff; /* blue */
-    --glass: rgba(255,255,255,0.04);
-  }
-  html,body{height:100%;margin:0;padding:0;font-family:'Poppins',sans-serif;overflow-x:hidden;background:transparent;}
-  /* full page gradient (consistent across app) */
-  .page-bg{
-    position:fixed; inset:0; z-index:0;
-    background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
-    filter: saturate(1.05);
-  }
-  /* subtle starfield */
-  .stars {
-    position:fixed; inset:0; z-index:1; pointer-events:none;
-    background-image: radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px);
-    background-size: 6px 6px; opacity: .12;
-    animation: twinkle 6s linear infinite;
-  }
-  @keyframes twinkle{
-    0%{opacity:.12}
-    50%{opacity:.08}
-    100%{opacity:.12}
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --glass-bg: rgba(255,255,255,0.04);
+      --glass-strong: rgba(255,255,255,0.06);
+      --accent: rgba(140,180,255,0.95);
+      --text: rgba(235,240,255,0.98);
+    }
+    html,body{height:100%;margin:0;padding:0;font-family:Inter,system-ui, -apple-system; background:transparent; color:var(--text); overflow:hidden;}
+    /* Full-page canvas background */
+    #galaxy-wrap { position:fixed; inset:0; z-index:0; }
+    canvas { width:100%; height:100%; display:block; }
 
-  /* hero card centered */
-  .page {
-    position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:40px;
-    box-sizing:border-box;
-  }
-  .hero-wrap{
-    width:86%; max-width:1100px; border-radius:24px; padding:48px; box-sizing:border-box;
-    backdrop-filter: blur(10px) saturate(120%);
-    -webkit-backdrop-filter: blur(10px) saturate(120%);
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    box-shadow: 0 20px 50px rgba(10,10,20,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
-    text-align:center;
-  }
-  .hero-title{ margin:0; font-size:48px; font-weight:800;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2)); -webkit-background-clip:text; color:transparent;
-  }
-  .hero-sub{ margin-top:10px; color:#e6f7ff; font-size:18px; opacity:.95; }
-  .typewrap{ text-align:center; margin-top:14px; color:#cde8ff; font-weight:600; }
-  .roles { color:#ffd3f0; font-weight:700; font-size:18px; height:26px; display:inline-block; margin-left:6px; }
+    /* page layout */
+    .page { position:relative; z-index:5; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:36px; box-sizing:border-box; }
 
-  .cta-row{ display:flex; gap:14px; justify-content:center; margin-top:22px; }
-  .btn {
-    padding:12px 20px; border-radius:999px; border:none; cursor:pointer; font-weight:700; font-size:15px;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-  }
-  .btn-outline {
-    padding:12px 20px; border-radius:999px; border:1px solid rgba(255,255,255,0.08);
-    background:transparent; color:#d7d7ff; font-weight:700;
-  }
+    /* glass hero */
+    .hero-card {
+      width:88%; max-width:1100px; border-radius:18px;
+      padding:44px 46px; box-sizing:border-box; backdrop-filter: blur(18px) saturate(120%);
+      -webkit-backdrop-filter: blur(18px) saturate(120%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border: 1px solid rgba(255,255,255,0.04);
+      box-shadow: 0 40px 100px rgba(2,6,20,0.6);
+      text-align:center;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.9s cubic-bezier(.2,.9,.3,1);
+    }
+    .hero-card.show { transform: translateY(0); opacity:1; }
 
-  /* floating bubble (bottom-right) */
-  .chat-bubble {
-    position:fixed; right:26px; bottom:26px; z-index:6;
-    width:64px; height:64px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(180deg,var(--bg2),var(--bg1));
-    box-shadow: 0 12px 40px rgba(10,10,20,0.45);
-    color:white; font-size:26px; cursor:pointer; transition: transform .18s ease;
-  }
-  .chat-bubble:hover{ transform: translateY(-6px); }
+    .hero-title { font-size:48px; font-weight:800; margin:0; letter-spacing:-0.02em; color: #f2f7ff; }
+    .hero-sub { margin-top:10px; color: rgba(230,240,255,0.9); font-size:18px; }
+    .typewrap { margin-top:12px; color: #ddeeff; font-weight:600; }
+    .roles { color:#cfe8ff; font-weight:700; margin-left:8px; }
 
-  /* popup chat window */
-  .chat-popup {
-    position:fixed; right:26px; bottom:100px; z-index:7; width:380px; max-width:92vw;
-    border-radius:14px; overflow:hidden; box-shadow: 0 30px 80px rgba(10,10,20,0.6);
-    display:none; /* toggled by JS */
-    transform-origin: bottom right;
-  }
-  .chat-card {
-    background: linear-gradient(180deg, rgba(8,10,14,0.98), rgba(12,14,18,0.95));
-    color:#fff;
-    padding:12px; box-sizing:border-box;
-  }
-  .chat-header{ display:flex; justify-content:space-between; align-items:center; padding:6px 8px; }
-  .chat-title { color:#6ef0ff; font-weight:800; font-size:15px; }
-  .chat-close { background:transparent; border:none; color:#b9dff7; font-size:18px; cursor:pointer; }
-  .chat-messages { max-height:320px; overflow:auto; padding:8px; margin-top:8px; }
-  .msg { margin:8px 0; padding:10px 12px; border-radius:12px; display:inline-block; clear:both; max-width:85%; }
-  .msg.user { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); float:right; color:#fff; }
-  .msg.bot { background: linear-gradient(90deg, rgba(120,120,255,0.06), rgba(120,120,255,0.02)); float:left; color:#fff; }
-  .chat-input-row { display:flex; gap:8px; margin-top:10px; }
-  .chat-input { flex:1; padding:10px; border-radius:10px; border:none; background:#0f1113; color:#e6eef8; }
-  .chat-send { padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; cursor:pointer; font-weight:700; }
+    .cta { margin-top:26px; display:flex; gap:12px; justify-content:center; align-items:center; }
+    .btn {
+      padding:10px 18px; border-radius:999px; font-weight:700; cursor:pointer; border:none;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, rgba(140,180,255,0.95), rgba(120,160,255,0.9));
+      color:#07182a; box-shadow: 0 8px 30px rgba(80,100,160,0.14);
+    }
+    .btn-ghost {
+      background: transparent; color: #cfe8ff; border:1px solid rgba(255,255,255,0.06); padding:10px 18px;
+    }
+    .btn:hover { transform: translateY(-4px); }
 
-  @media (max-width:800px){
-    .hero-title{ font-size:32px; }
-    .chat-popup { right:12px; left:12px; bottom:90px; width:calc(100% - 24px); }
-    .chat-bubble { right:12px; bottom:12px; }
-  }
-</style>
+    /* floating dynamic island/chat bubble */
+    .chat-orb {
+      position:fixed; right:28px; bottom:28px; z-index:20;
+      width:64px; height:64px; border-radius:999px;
+      background: linear-gradient(180deg, rgba(10,12,15,0.95), rgba(22,24,28,0.95));
+      box-shadow: 0 18px 60px rgba(2,6,18,0.6);
+      display:flex; align-items:center; justify-content:center; cursor:pointer;
+      transition: transform .18s ease, box-shadow .18s ease;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .chat-orb:hover { transform: translateY(-6px); box-shadow: 0 28px 84px rgba(2,6,18,0.75); }
+
+    /* dynamic island modal */
+    .island {
+      position: fixed; right:26px; bottom:106px; z-index:30; display:none; width:420px; max-width:92vw;
+      border-radius:14px; overflow:hidden; background: linear-gradient(180deg,#071018,#0b131a);
+      box-shadow: 0 30px 100px rgba(1,4,10,0.7);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .island.show { display:block; animation: islandIn .28s cubic-bezier(.2,.9,.3,1); }
+    @keyframes islandIn { from { transform: translateY(10px) scale(.98); opacity:0 } to { transform: translateY(0) scale(1); opacity:1 } }
+
+    .island .header { padding:12px 14px; display:flex; justify-content:space-between; align-items:center; color:#bfe8ff; font-weight:800; }
+    .island .body { padding:10px 12px; max-height:340px; overflow:auto; }
+    .island .footer { padding:12px; display:flex; gap:8px; }
+
+    .msg { margin:8px 0; padding:10px 12px; border-radius:12px; max-width:82%; color:#eef7ff; }
+    .msg.user { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); color:#f3f9ff; margin-left:auto; text-align:right; }
+    .msg.bot { background: linear-gradient(90deg, rgba(90,120,160,0.06), rgba(90,120,160,0.02)); color:#eef7ff; margin-right:auto; }
+
+    .chat-input { flex:1; padding:10px 12px; border-radius:10px; border: none; background:#0f1316; color:#dfefff; outline:none; }
+
+    /* small screens */
+    @media (max-width:760px){
+      .hero-card { padding:28px 22px; width:92%; }
+      .hero-title { font-size:32px; }
+      .island { left:12px; right:12px; bottom:90px; width:calc(100% - 24px); }
+    }
+
+    /* album-style subtle caption */
+    .small-note { position:fixed; left:18px; bottom:16px; z-index:6; color:rgba(220,230,240,0.55); font-size:13px; }
+  </style>
 </head>
 <body>
-  <div class="page-bg"></div>
-  <div class="stars"></div>
+  <div id="galaxy-wrap">
+    <canvas id="galaxy"></canvas>
+  </div>
 
-  <div class="page">
-    <div class="hero-wrap" role="main" aria-label="hero">
+  <div class="page" role="main">
+    <div class="hero-card" id="heroCard" role="banner" aria-label="Hero">
       <h1 class="hero-title">Aryan Sharma</h1>
-      <div class="hero-sub">Welcome to my personal website! <span id="blink">|</span></div>
+      <div class="hero-sub">Welcome to my personal website!</div>
       <div class="typewrap">I'm a <span class="roles" id="role">tech enthusiast</span></div>
-      <div class="cta-row">
-        <button class="btn" onclick="location.href='#projects'">Download Resume</button>
-        <button class="btn-outline" onclick="location.href='#contact'">Get In Touch</button>
+
+      <div class="cta">
+        <a class="btn btn-primary" href="/resume.pdf#chatbot-section" role="button">Download Resume</a>
+        <button class="btn btn-ghost" onclick="document.getElementById('projects_anchor').scrollIntoView({behavior:'smooth'})">Get In Touch</button>
       </div>
     </div>
   </div>
 
-  <!-- floating chat bubble -->
-  <div class="chat-bubble" id="chatBubble" title="Ask me about Aryan">💬</div>
+  <div class="chat-orb" id="chatOrb" aria-label="Open chat">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10z" fill="white" opacity="0.95"/></svg>
+  </div>
 
-  <!-- popup chat -->
-  <div class="chat-popup" id="chatPopup" role="dialog" aria-modal="true" aria-label="Aryan chatbot popup">
-    <div class="chat-card">
-      <div class="chat-header">
-        <div class="chat-title">Ask me about Aryan ☕</div>
-        <div>
-          <button class="chat-close" id="minimizeBtn" title="Minimize">—</button>
-          <button class="chat-close" id="closeBtn" title="Close">✕</button>
-        </div>
-      </div>
-      <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" class="chat-input" placeholder="Type a question (e.g. Who is Aryan?)" />
-        <button id="sendBtn" class="chat-send">Send</button>
-      </div>
+  <div class="island" id="island" role="dialog" aria-modal="true" aria-label="Chat with Aryan">
+    <div class="header">Ask me about Aryan ☕ <div style="font-size:14px;opacity:.7">| Chat</div></div>
+    <div class="body" id="chatBody" aria-live="polite"></div>
+    <div class="footer">
+      <input id="chatText" class="chat-input" placeholder="Type: Who is Aryan?" />
+      <button id="chatSend" class="btn btn-primary" style="padding:8px 12px;">Send</button>
     </div>
   </div>
+
+  <div class="small-note">Galaxy theme — optimized for desktop</div>
 
 <script>
-  // client-side copy of Aryan Q&A
-  const aryanFacts = {
-    "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
-    "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
-    "what makes aryan smile": "Random jokes, good coffee, and accidental life plot twists.",
-    "what’s aryan’s comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
-    "does aryan like travelling": "Yes! Especially when the trip ends with coffee and mountain views.",
-    "how does aryan handle pressure": "With calmness… and maybe two extra cups of coffee.",
-    "what is aryan good at": "Turning simple moments into mini stories and making people laugh randomly.",
-    "what’s aryan’s vibe": "Chill, creative, and always up for a good conversation.",
-    "is aryan an introvert or extrovert": "Somewhere in between—depends on the energy, the weather, and the wifi.",
-    "what motivates aryan": "New ideas, good music, and that one perfect cup of coffee.",
-    "how does aryan face challenges": "With confidence… and sarcasm when required.",
-    "what’s something aryan can’t live without": "Coffee. None 😅. But coffee keeps him warm, so no complaints.",
-    "what makes aryan unique": "His ability to make people laugh even when he’s not trying.",
-    "what’s aryan’s favorite weather": "Cold breeze + warm coffee = perfection.",
-    "how does aryan relax": "Storytelling, music, and wandering thoughts.",
-    "what is aryan passionate about": "Tech, creativity, and turning ideas into reality.",
-    "what is aryan learning right now": "New tech skills… one coffee at a time.",
-    "what type of person is aryan": "Calm, humorous, and secretly a deep thinker.",
-    "what’s aryan’s favourite thing to do": "Observe life and turn it into funny, relatable stories.",
-    "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
-  };
+/* ========== Canvas Galaxy (multi-layered, parallax) ========== */
+(() => {
+  const canvas = document.getElementById('galaxy');
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  let w = canvas.clientWidth;
+  let h = canvas.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
-  // UI elements
-  const bubble = document.getElementById('chatBubble');
-  const popup = document.getElementById('chatPopup');
-  const messages = document.getElementById('chatMessages');
-  const input = document.getElementById('chatInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const closeBtn = document.getElementById('closeBtn');
-  const minimizeBtn = document.getElementById('minimizeBtn');
+  // star layers config
+  const layers = [
+    {count: 120, speed: 0.02, size: [0.4,1.2], alpha: 0.7},
+    {count: 60, speed: 0.05, size: [1.2,2.2], alpha: 0.9},
+    {count: 30, speed: 0.12, size: [2.6,3.8], alpha: 0.95}
+  ];
+  let stars = [];
+  let t = 0;
+  let mx = 0, my = 0;
+
+  function rand(min,max){ return Math.random()*(max-min)+min; }
+
+  function makeStars(){
+    stars = layers.map(layer => {
+      const arr = [];
+      for(let i=0;i<layer.count;i++){
+        arr.push({
+          x: Math.random()*w,
+          y: Math.random()*h,
+          z: rand(layer.size[0], layer.size[1]),
+          a: layer.alpha * (0.6 + Math.random()*0.4),
+          vx: (Math.random()*2-1) * layer.speed,
+          vy: (Math.random()*2-1) * layer.speed
+        });
+      }
+      return arr;
+    });
+  }
+
+  function drawNebula(){
+    // soft drifting nebula using radial gradients
+    const g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0, 'rgba(20,18,36,0.36)');
+    g.addColorStop(0.35, 'rgba(60,30,90,0.18)');
+    g.addColorStop(0.7, 'rgba(24,40,80,0.15)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,w,h);
+
+    // layered lighter glows
+    const cx = w * 0.68 + Math.sin(t*0.2)*120;
+    const cy = h * 0.28 + Math.cos(t*0.15)*80;
+    const rg = ctx.createRadialGradient(cx,cy,0,cx,cy, Math.max(w,h)*0.9);
+    rg.addColorStop(0, 'rgba(95,120,220,0.14)');
+    rg.addColorStop(0.25, 'rgba(120,80,220,0.08)');
+    rg.addColorStop(0.55, 'rgba(20,28,48,0.02)');
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = rg;
+    ctx.fillRect(0,0,w,h);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function drawStars(){
+    for(let li=0; li<stars.length; li++){
+      const layer = stars[li];
+      for(let s of layer){
+        // parallax offset based on mouse
+        const px = (mx - w/2) * (0.0005 + li*0.0009);
+        const py = (my - h/2) * (0.0005 + li*0.0009);
+        s.x += s.vx * (1+li*0.4);
+        s.y += s.vy * (1+li*0.4);
+        // wrap-around
+        if (s.x < -10) s.x = w+10;
+        if (s.x > w+10) s.x = -10;
+        if (s.y < -10) s.y = h+10;
+        if (s.y > h+10) s.y = -10;
+
+        const size = s.z;
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,'+ (s.a* (0.6 + Math.sin((t+s.x+s.y)/70)*0.4)) +')';
+        ctx.arc(s.x + px*40, s.y + py*40, size, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function resize(){
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+    makeStars();
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; });
+
+  makeStars();
+
+  function loop(){
+    t += 0.016;
+    ctx.clearRect(0,0,w,h);
+    drawNebula();
+    drawStars();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+
+/* ========== Hero show animation + typewriter ========== */
+window.addEventListener('DOMContentLoaded', function(){
+  const hero = document.getElementById('heroCard');
+  setTimeout(()=>hero.classList.add('show'), 120);
+  // typewriter
+  const roles = ["web developer","learner","tech enthusiast","programmer","writer","video editor"];
+  let idx=0, pos=0, forw=true;
+  const roleEl = document.getElementById('role');
+  function tTick(){
+    const cur = roles[idx];
+    if (forw){ pos++; roleEl.textContent = cur.slice(0,pos); if (pos === cur.length){ forw=false; setTimeout(tTick,900); return; } }
+    else { pos--; roleEl.textContent = cur.slice(0,pos); if (pos===0){ forw=true; idx=(idx+1)%roles.length; setTimeout(tTick,400); return; } }
+    setTimeout(tTick,70);
+  }
+  tTick();
+});
+
+/* ========== Chatbot dynamic island behavior + client-side Q&A ========== */
+(() => {
+  const facts = JSON.parse(`""" + (lambda: ( (lambda d: d) (str(aryan_facts).replace("'", "\\'").replace("\\n","\\n")) ))() + """`); 
+  // Note: the above is replaced at runtime by Python rendering - but Streamlit components.html escapes raw string.
+})();
+
+</script>
+
+<script>
+/* Because we cannot easily inject a Python dict via raw HTML here (components.html),
+   we'll instead create a plain JS copy of the aryan_facts below for the chatbot. */
+const ARYAN_FACTS = {
+"""  # we'll append JS key-values from Python below
+# Close the hero_html string in Python and we will reconstruct with aryan_facts inserted dynamically.
+"""
+
+# Build the JS facts mapping text (safe escaping)
+facts_js_lines = []
+for k, v in aryan_facts.items():
+    # escape quotes and backslashes
+    kk = k.replace("\\", "\\\\").replace("\"", "\\\"")
+    vv = v.replace("\\", "\\\\").replace("\"", "\\\"")
+    facts_js_lines.append(f'  "{kk}": "{vv}"')
+facts_js = ",\n".join(facts_js_lines)
+
+# Now produce the remainder of the HTML/JS (chat logic and footer)
+hero_html_end = r"""
+};
+
+(function(){
+  const orb = document.getElementById('chatOrb');
+  const island = document.getElementById('island');
+  const chatBody = document.getElementById('chatBody');
+  const chatText = document.getElementById('chatText');
+  const chatSend = document.getElementById('chatSend');
 
   function addMessage(text, who='bot'){
     const el = document.createElement('div');
     el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
     el.textContent = text;
-    messages.appendChild(el);
-    messages.scrollTop = messages.scrollHeight;
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
   }
 
-  function replyTo(text){
-    const q = text.toLowerCase().trim();
-    // exact matching by presence of key words:
-    for (const k in aryanFacts){
-      if (q.includes(k)) {
-        return aryanFacts[k];
-      }
-    }
-    // fallback attempts: check for keywords
-    if (q.includes('name')) return "Aryan is Aryan Sharma — that guy who turns everyday moments into funny stories.";
-    if (q.includes('study') || q.includes('studying')) return aryanFacts["what is aryan currently studying"];
-    if (q.includes('coffee')) return aryanFacts["what’s aryan’s comfort drink"];
-    if (q.includes('travel')) return aryanFacts["does aryan like travelling"];
-    // default
-    return "Ask me anything about Aryan ☕🙂!";
-  }
-
-  bubble.addEventListener('click', () => {
-    popup.style.display = 'block';
-    popup.style.transform = 'scale(1)';
-    input.focus();
-    // initial greeting if empty
-    if (!messages.hasChildNodes()){
+  // initial bot greeting
+  function greet(){
+    if (chatBody.children.length === 0){
       addMessage("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
     }
-  });
-
-  closeBtn.addEventListener('click', () => {
-    popup.style.display = 'none';
-  });
-  minimizeBtn.addEventListener('click', () => {
-    // minimize = hide but keep bubble visible
-    popup.style.display = 'none';
-  });
-
-  function handleSend(){
-    const txt = input.value.trim();
-    if (!txt) return;
-    addMessage(txt, 'user');
-    input.value = '';
-    // tiny "thinking" delay for UX
-    setTimeout(() => {
-      const r = replyTo(txt);
-      addMessage(r, 'bot');
-    }, 300 + Math.random()*400);
   }
 
-  sendBtn.addEventListener('click', handleSend);
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
+  orb.addEventListener('click', (e)=>{
+    island.classList.toggle('show');
+    if (island.classList.contains('show')) { chatText.focus(); greet(); }
   });
 
-  // small typewriter for role
-  const roles = ["web developer","learner","tech enthusiast","programmer","writer","video editor"];
-  let ridx=0, rpos=0, rfor=true;
-  const roleEl = document.getElementById('role');
-  const blink = document.getElementById('blink');
-  function tick(){
-    const cur = roles[ridx];
-    if (rfor){
-      rpos++;
-      roleEl.textContent = cur.slice(0,rpos);
-      if (rpos === cur.length){ rfor=false; setTimeout(tick,900); return; }
-    } else {
-      rpos--;
-      roleEl.textContent = cur.slice(0,rpos);
-      if (rpos === 0){ rfor=true; ridx=(ridx+1)%roles.length; setTimeout(tick,400); return; }
+  document.getElementById('chatSend').addEventListener('click', ()=>{
+    const text = chatText.value.trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    chatText.value = '';
+    // reply logic: try to match keys
+    const q = text.toLowerCase();
+    let reply = null;
+    for (const k in ARYAN_FACTS){
+      if (q.includes(k)) { reply = ARYAN_FACTS[k]; break; }
     }
-    setTimeout(tick,70);
-  }
-  tick();
-  setInterval(()=>{ blink.style.visibility = (blink.style.visibility==='hidden'?'visible':'hidden') },600);
+    if (!reply){
+      if (q.includes('name')) reply = "Aryan is Aryan Sharma — that guy who turns everyday moments into funny stories.";
+      else if (q.includes('coffee')) reply = ARYAN_FACTS["what’s aryan’s comfort drink"] || "Coffee ☕";
+      else if (q.includes('study')|| q.includes('studying')) reply = ARYAN_FACTS["what is aryan currently studying"] || "Pursuing a Bachelor's degree.";
+      else if (q.includes('travel')) reply = ARYAN_FACTS["does aryan like travelling"] || "Yes! especially with coffee and mountains.";
+      else reply = "Ask me anything about Aryan ☕🙂!";
+    }
+    // small delay for UX
+    setTimeout(()=>addMessage(reply,'bot'), 260 + Math.random()*400);
+  });
+
+  chatText.addEventListener('keydown', (e)=>{ if (e.key === 'Enter') { e.preventDefault(); chatSend.click(); } });
+
+  // allow close via ESC
+  document.addEventListener('keydown', (e)=>{
+    if (e.key === 'Escape') island.classList.remove('show');
+  });
+
+})();
 </script>
 </body>
 </html>
 """
 
-# -------------- Render the hero HTML (components) -------------
-# Use a tall height so the component fills the top area comfortably.
-components.html(hero_html, height=740, scrolling=False)
+# Now combine hero_html + facts JS + hero_html_end into final_html string
+full_hero_html = hero_html + facts_js + hero_html_end
 
-# ---------- Global CSS override for Streamlit app background to match theme ----------
-# This makes the rest of the Streamlit page use the same gradient (glass cards remain readable).
+# Render the hero HTML component (height tuned for large hero)
+components.html(full_hero_html, height=760, scrolling=False)
+
+
+# ---------------- Global CSS override for Streamlit (Apple glass + full galaxy) ----------------
 st.markdown(
     """
     <style>
-    /* Force Streamlit body background to be transparent so our component gradient shows through */
+    /* make Streamlit app transparent so canvas shows through */
     .stApp {
-        background: linear-gradient(135deg, rgba(255,111,181,0.95) 0%, rgba(132,94,247,0.95) 50%, rgba(122,211,255,0.95) 100%) !important;
-        color: #eaf6ff;
+      background: transparent !important;
+      color: #eaf6ff !important;
     }
-    /* Make Streamlit default white cards look glassy */
-    .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
-        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
-        border: 1px solid rgba(255,255,255,0.04);
-        box-shadow: 0 10px 40px rgba(6,6,10,0.35);
+
+    /* make block containers glassy */
+    .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1, .css-18e3th9 {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
+      border: 1px solid rgba(255,255,255,0.04) !important;
+      box-shadow: 0 12px 40px rgba(6,8,14,0.45) !important;
+      color: #eaf6ff !important;
     }
-    /* Tweak headings and text colors for contrast */
-    .css-10trblm.egzxvld1 { color: #eaf6ff; } /* headers */
-    .stMarkdown { color: #eaf6ff; }
-    .stText { color: #eaf6ff; }
-    /* links */
-    a { color: #cde8ff !important; }
+
+    /* headings & text */
+    .css-10trblm.egzxvld1 { color: #eaf6ff !important; }
+    .stMarkdown, .stText, .stButton { color: #eaf6ff !important; }
+    a { color: #cfe8ff !important; }
+
+    /* gallery images: rounded glass cards */
+    .gallery-image img { border-radius:12px; box-shadow: 0 14px 40px rgba(3,6,12,0.5); }
+
+    /* make horizontal rule subtle */
+    hr { border-color: rgba(255,255,255,0.04); }
+
+    /* responsive tweaks */
+    @media (max-width:800px){
+      .stBlock, .css-1lcbmhc.e1fqkh3o3 { padding: 12px !important; }
+    }
     </style>
     """, unsafe_allow_html=True
 )
 
-# ---------- Streamlit content area below (sections auto-load) ----------
+# ---------------- Streamlit content: gallery & blog (restyled) ----------------
 st.markdown("---")
 col1, col2 = st.columns([1,2])
 
-# Left column: Gallery preview (floating icons in component scroll to these)
 with col1:
     st.markdown("### 📸 Photos (Gallery)")
     images = get_gallery_images()
     if not images:
         st.info("No images found. Add files to the `gallery/` folder.")
     else:
-        # small preview grid
+        # modern grid preview: two per column (use st.image)
         for i, img in enumerate(images):
-            st.image(img, use_column_width=True, caption=os.path.basename(img))
-            if i>=5: break
+            st.markdown(f"<div class='gallery-image' style='margin-bottom:14px;'><img src='{img}' style='width:100%; border-radius:12px;'/></div>", unsafe_allow_html=True)
+            if i >= 5: break
         if len(images) > 6:
             st.caption(f"Plus {len(images)-6} more — they'll appear here automatically.")
 
-# Right column: Blog & Writings sections
 with col2:
     st.markdown("### ✍️ Writings (anonymous)")
-    # anonymous message box
     if "anon_messages" not in st.session_state:
         st.session_state.anon_messages = []
     with st.form("anon_form", clear_on_submit=True):
@@ -421,31 +518,38 @@ with col2:
             st.markdown(p["html"], unsafe_allow_html=True)
             st.markdown("---")
 
-# ---------- NOTE: Chat is now provided via the floating popup bubble in the hero component ----------
+# Indicate the chat is available via the dynamic island
 st.markdown("---")
-st.info("Chat is available via the floating 💬 bubble (bottom-right) — click it to Ask me about Aryan.")
+st.info("Chat is available via the floating chat orb (bottom-right). Click to Ask me about Aryan.")
 
-# ---------- Footer / Projects / Contact placeholders ----------
+# ---------------- Projects / Contact: glass cards ----------------
 st.markdown("---")
-st.markdown("<a id='projects'></a>", unsafe_allow_html=True)
+st.markdown("<a id='projects_anchor'></a>", unsafe_allow_html=True)
 st.header("Projects")
 st.markdown("""
-- Chatbot Website  
-- Portfolio Builder  
-- AI Experiments  
-(Projects area — add more details to `app.py` or use markdown posts.)
-""")
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:18px;">
+  <div style="background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9)); padding:16px; border-radius:12px;">
+    <strong>Chatbot App</strong><div style="opacity:.8; margin-top:6px;">Client-side Q&A chatbot with personality & fallback logic.</div>
+  </div>
+  <div style="background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9)); padding:16px; border-radius:12px;">
+    <strong>Portfolio Website</strong><div style="opacity:.8; margin-top:6px;">This polished portfolio & blog system.</div>
+  </div>
+  <div style="background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9)); padding:16px; border-radius:12px;">
+    <strong>Machine Learning</strong><div style="opacity:.8; margin-top:6px;">Small experiments with models & data.</div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
 st.header("Contact")
 st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryanxsharma26)")
 
-# ---------- Admin / instructions (hidden by default) ----------
+# ---------------- Footer / notes ----------------
 st.markdown("---")
 st.markdown("### ⚙️ Notes & Setup")
 st.markdown("""
-- Put image files inside `gallery/` (jpg, png, webp). They will auto-appear in the Photos section.
-- Put markdown files (`.md`) inside `blog_posts/` — these will be parsed and displayed under Blog Posts.
-- The chat widget is client-side (JS) and uses the 20 Q&A answers you provided. If you'd like the bot to call a Python backend or an API (for dynamic replies), I can wire that up next.
-- To change colors/feel, edit the CSS in the `hero_html` string at the top.
+- Place `resume.pdf` at the project root or in `public/` so `/resume.pdf` resolves (used by Download Resume link).
+- Gallery images go in `gallery/`. Blog posts go in `blog_posts/` as `.md`.
+- The chatbot is client-side JS using your 20 Q&A entries. If you want server-side logging or LLM answers, I can wire that next.
+- To tweak animation speed or star density, edit the canvas JS in the `hero_html` string at the top of this file.
 """)
