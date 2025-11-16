@@ -13,12 +13,14 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
+
 def get_gallery_images():
     if not os.path.exists(GALLERY_DIR):
         return []
     files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
     files.sort()
     return [os.path.join("gallery", f) for f in files]
+
 
 def get_post_data(slug):
     file_path = os.path.join(POSTS_DIR, f"{slug}.md")
@@ -32,19 +34,20 @@ def get_post_data(slug):
     if meta_match:
         meta_block = meta_match.group(1)
         for line in meta_block.splitlines():
-            if ':' in line:
-                k,v = line.split(':',1)
+            if ":" in line:
+                k, v = line.split(":", 1)
                 meta[k.strip()] = v.strip()
         body = content[meta_match.end():].strip()
     html = markdown(body)
     return {
         "slug": slug,
-        "title": meta.get("title", slug.replace('-', ' ').capitalize()),
+        "title": meta.get("title", slug.replace("-", " ").capitalize()),
         "date": meta.get("date", ""),
         "author": meta.get("author", ""),
         "summary": meta.get("summary", ""),
         "html": html,
     }
+
 
 def get_all_posts():
     if not os.path.exists(POSTS_DIR):
@@ -58,7 +61,8 @@ def get_all_posts():
             posts.append(data)
     return posts
 
-# ---------- Chatbot knowledge (Python copy) ----------
+
+# ---------- Chatbot knowledge (kept here for reference / future server-side use) ----------
 aryan_facts = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -83,45 +87,56 @@ aryan_facts = {
 }
 
 # ---------- Full-screen themed hero + popup chat (rendered via components.html) ----------
+# This hero_html contains:
+#  - animated gradient background
+#  - typewriter role line
+#  - neon/glass hero wrap
+#  - floating chat bubble with client-side JS (no server storage)
 hero_html = """
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg1:#ff6fb5; /* pink */
-    --bg2:#845ef7; /* purple */
-    --bg3:#7ad3ff; /* blue */
-    --glass: rgba(255,255,255,0.04);
+    --bg1:#ff6fb5;
+    --bg2:#845ef7;
+    --bg3:#7ad3ff;
   }
   html,body{height:100%;margin:0;padding:0;font-family:'Poppins',sans-serif;overflow-x:hidden;background:transparent;}
-  /* full page gradient (consistent across app) */
+  /* animated gradient background */
   .page-bg{
     position:fixed; inset:0; z-index:0;
     background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+    background-size: 400% 400%;
+    animation: gradientFlow 12s ease infinite;
     filter: saturate(1.05);
   }
-  /* subtle starfield */
+  @keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* subtle starfield for depth */
   .stars {
     position:fixed; inset:0; z-index:1; pointer-events:none;
     background-image: radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px);
-    background-size: 6px 6px; opacity: .12;
+    background-size: 6px 6px; opacity: .10;
     animation: twinkle 6s linear infinite;
   }
   @keyframes twinkle{
-    0%{opacity:.12}
-    50%{opacity:.08}
-    100%{opacity:.12}
+    0%{opacity:.10}
+    50%{opacity:.06}
+    100%{opacity:.10}
   }
 
-  /* hero card centered */
+  /* hero container */
   .page {
     position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:40px;
-    box-sizing:border-box;
+    padding:40px; box-sizing:border-box;
   }
   .hero-wrap{
     width:86%; max-width:1100px; border-radius:24px; padding:48px; box-sizing:border-box;
@@ -131,6 +146,9 @@ hero_html = """
     box-shadow: 0 20px 50px rgba(10,10,20,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.04);
     text-align:center;
+    transform-style: preserve-3d;
+    transition: transform 0.12s ease-out;
+    position: relative;
   }
   .hero-title{ margin:0; font-size:48px; font-weight:800;
     background:linear-gradient(90deg,var(--bg1),var(--bg2)); -webkit-background-clip:text; color:transparent;
@@ -159,11 +177,11 @@ hero_html = """
   }
   .chat-bubble:hover{ transform: translateY(-6px); }
 
-  /* popup chat window */
+  /* popup chat window (client-side only; DOES NOT store messages server-side) */
   .chat-popup {
     position:fixed; right:26px; bottom:100px; z-index:7; width:380px; max-width:92vw;
     border-radius:14px; overflow:hidden; box-shadow: 0 30px 80px rgba(10,10,20,0.6);
-    display:none; /* toggled by JS */
+    display:none;
     transform-origin: bottom right;
   }
   .chat-card {
@@ -194,9 +212,9 @@ hero_html = """
   <div class="stars"></div>
 
   <div class="page">
-    <div class="hero-wrap" role="main" aria-label="hero">
+    <div class="hero-wrap" id="parallaxHero" role="main" aria-label="hero">
       <h1 class="hero-title">Aryan Sharma</h1>
-      <div class="hero-sub">Welcome to my personal website! <span id="blink">|</span></div>
+      <div class="hero-sub">Welcome to my personal website!</div>
       <div class="typewrap">I'm a <span class="roles" id="role">tech enthusiast</span></div>
       <div class="cta-row">
         <button class="btn" onclick="location.href='#projects'">Download Resume</button>
@@ -208,7 +226,7 @@ hero_html = """
   <!-- floating chat bubble -->
   <div class="chat-bubble" id="chatBubble" title="Ask me about Aryan">💬</div>
 
-  <!-- popup chat -->
+  <!-- popup chat (client-side only) -->
   <div class="chat-popup" id="chatPopup" role="dialog" aria-modal="true" aria-label="Aryan chatbot popup">
     <div class="chat-card">
       <div class="chat-header">
@@ -227,7 +245,7 @@ hero_html = """
   </div>
 
 <script>
-  // client-side copy of Aryan Q&A
+  // client-side copy of Aryan Q&A (no server storage; messages exist only in the user's page session)
   const aryanFacts = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -259,6 +277,7 @@ hero_html = """
   const sendBtn = document.getElementById('sendBtn');
   const closeBtn = document.getElementById('closeBtn');
   const minimizeBtn = document.getElementById('minimizeBtn');
+  const hero = document.getElementById('parallaxHero');
 
   function addMessage(text, who='bot'){
     const el = document.createElement('div');
@@ -276,43 +295,35 @@ hero_html = """
         return aryanFacts[k];
       }
     }
-    // fallback attempts: check for keywords
+    // fallback simple keyword heuristics
     if (q.includes('name')) return "Aryan is Aryan Sharma — that guy who turns everyday moments into funny stories.";
     if (q.includes('study') || q.includes('studying')) return aryanFacts["what is aryan currently studying"];
     if (q.includes('coffee')) return aryanFacts["what’s aryan’s comfort drink"];
     if (q.includes('travel')) return aryanFacts["does aryan like travelling"];
-    // default
+    // default fallback
     return "Ask me anything about Aryan ☕🙂!";
   }
 
   bubble.addEventListener('click', () => {
     popup.style.display = 'block';
-    popup.style.transform = 'scale(1)';
     input.focus();
-    // initial greeting if empty
     if (!messages.hasChildNodes()){
       addMessage("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
     }
   });
 
-  closeBtn.addEventListener('click', () => {
-    popup.style.display = 'none';
-  });
-  minimizeBtn.addEventListener('click', () => {
-    // minimize = hide but keep bubble visible
-    popup.style.display = 'none';
-  });
+  closeBtn.addEventListener('click', () => { popup.style.display = 'none'; });
+  minimizeBtn.addEventListener('click', () => { popup.style.display = 'none'; });
 
   function handleSend(){
     const txt = input.value.trim();
     if (!txt) return;
     addMessage(txt, 'user');
     input.value = '';
-    // tiny "thinking" delay for UX
     setTimeout(() => {
       const r = replyTo(txt);
       addMessage(r, 'bot');
-    }, 300 + Math.random()*400);
+    }, 300 + Math.random()*300);
   }
 
   sendBtn.addEventListener('click', handleSend);
@@ -320,17 +331,16 @@ hero_html = """
     if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
   });
 
-  // small typewriter for role
-  const roles = ["web developer","learner","tech enthusiast","programmer","writer","video editor"];
+  // Roles typewriter (hero)
+  const roles = ["Tech Enthusiast","AI Learner","Creative Storyteller","Coffee-Powered Human ☕"];
   let ridx=0, rpos=0, rfor=true;
   const roleEl = document.getElementById('role');
-  const blink = document.getElementById('blink');
   function tick(){
     const cur = roles[ridx];
     if (rfor){
       rpos++;
       roleEl.textContent = cur.slice(0,rpos);
-      if (rpos === cur.length){ rfor=false; setTimeout(tick,900); return; }
+      if (rpos === cur.length){ rfor=false; setTimeout(tick,1100); return; }
     } else {
       rpos--;
       roleEl.textContent = cur.slice(0,rpos);
@@ -339,27 +349,34 @@ hero_html = """
     setTimeout(tick,70);
   }
   tick();
-  setInterval(()=>{ blink.style.visibility = (blink.style.visibility==='hidden'?'visible':'hidden') },600);
+
+  // 3D parallax on mouse move (subtle)
+  document.addEventListener("mousemove", (e) => {
+    const x = (window.innerWidth / 2 - e.clientX) / 40;
+    const y = (window.innerHeight / 2 - e.clientY) / 40;
+    hero.style.transform = `perspective(800px) rotateY(${x}deg) rotateX(${y}deg) translateZ(0)`;
+  });
+  document.addEventListener("mouseleave", () => { hero.style.transform = "none"; });
 </script>
 </body>
 </html>
 """
 
 # -------------- Render the hero HTML (components) -------------
-# Use a tall height so the component fills the top area comfortably.
-components.html(hero_html, height=740, scrolling=False)
+# Components height set to comfortably show hero area
+components.html(hero_html, height=820, scrolling=False)
 
 # ---------- Global CSS override for Streamlit app background to match theme ----------
-# This makes the rest of the Streamlit page use the same gradient (glass cards remain readable).
+# Keeps Streamlit areas readable while matching the hero's visual style.
 st.markdown(
     """
     <style>
-    /* Force Streamlit body background to be transparent so our component gradient shows through */
+    /* Use a matching gradient for the Streamlit app background (transparent feel) */
     .stApp {
         background: linear-gradient(135deg, rgba(255,111,181,0.95) 0%, rgba(132,94,247,0.95) 50%, rgba(122,211,255,0.95) 100%) !important;
         color: #eaf6ff;
     }
-    /* Make Streamlit default white cards look glassy */
+    /* Make typical Streamlit cards look glassy */
     .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
         background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
         border: 1px solid rgba(255,255,255,0.04);
@@ -369,7 +386,6 @@ st.markdown(
     .css-10trblm.egzxvld1 { color: #eaf6ff; } /* headers */
     .stMarkdown { color: #eaf6ff; }
     .stText { color: #eaf6ff; }
-    /* links */
     a { color: #cde8ff !important; }
     </style>
     """, unsafe_allow_html=True
@@ -377,7 +393,7 @@ st.markdown(
 
 # ---------- Streamlit content area below (sections auto-load) ----------
 st.markdown("---")
-col1, col2 = st.columns([1,2])
+col1, col2 = st.columns([1, 2])
 
 # Left column: Gallery preview (floating icons in component scroll to these)
 with col1:
@@ -386,66 +402,48 @@ with col1:
     if not images:
         st.info("No images found. Add files to the `gallery/` folder.")
     else:
-        # small preview grid
+        # small preview grid (show up to 6)
         for i, img in enumerate(images):
             st.image(img, use_column_width=True, caption=os.path.basename(img))
-            if i>=5: break
+            if i >= 5:
+                break
         if len(images) > 6:
             st.caption(f"Plus {len(images)-6} more — they'll appear here automatically.")
 
 # Right column: Blog & Writings sections
 with col2:
-    st.markdown("### ✍️ Writings (anonymous)")
-    # anonymous message box
-    if "anon_messages" not in st.session_state:
-        st.session_state.anon_messages = []
-    with st.form("anon_form", clear_on_submit=True):
-        msg = st.text_area("Share anonymously", placeholder="Write something anonymously...")
-        submitted = st.form_submit_button("Send anonymously")
-        if submitted and msg.strip():
-            st.session_state.anon_messages.insert(0, {"msg": msg, "time": time.asctime()})
-            st.success("Message sent anonymously — visible in admin (local session).")
-    if st.session_state.anon_messages:
-        for m in st.session_state.anon_messages[:8]:
-            st.info(m["msg"])
-
-    st.markdown("---")
-    st.markdown("### 📰 Blog Posts")
+    st.markdown("### ✍️ Writings (Markdown posts)")
     posts = get_all_posts()
     if not posts:
         st.info("No blog posts found. Add `.md` files to `blog_posts/`.")
     else:
         for p in posts:
             st.subheader(p["title"])
-            st.caption(p.get("date",""))
+            st.caption(p.get("date", ""))
             st.markdown(p["html"], unsafe_allow_html=True)
             st.markdown("---")
 
-# ---------- NOTE: Chat is now provided via the floating popup bubble in the hero component ----------
+# ---------- Short info about chat availability (client-side) ----------
 st.markdown("---")
-st.info("Chat is available via the floating 💬 bubble (bottom-right) — click it to Ask me about Aryan.")
+st.info("Chat is available via the floating 💬 bubble (bottom-right). The chat runs client-side and does not store messages on the server.")
 
 # ---------- Footer / Projects / Contact placeholders ----------
 st.markdown("---")
 st.markdown("<a id='projects'></a>", unsafe_allow_html=True)
 st.header("Projects")
-st.markdown("""
+st.markdown(
+    """
 - Chatbot Website  
 - Portfolio Builder  
 - AI Experiments  
 (Projects area — add more details to `app.py` or use markdown posts.)
-""")
+"""
+)
 
 st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
 st.header("Contact")
 st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryanxsharma26)")
 
-# ---------- Admin / instructions (hidden by default) ----------
-st.markdown("---")
-st.markdown("### ⚙️ Notes & Setup")
-st.markdown("""
-- Put image files inside `gallery/` (jpg, png, webp). They will auto-appear in the Photos section.
-- Put markdown files (`.md`) inside `blog_posts/` — these will be parsed and displayed under Blog Posts.
-- The chat widget is client-side (JS) and uses the 20 Q&A answers you provided. If you'd like the bot to call a Python backend or an API (for dynamic replies), I can wire that up next.
-- To change colors/feel, edit the CSS in the `hero_html` string at the top.
-""")
+# ---------- (Removed Notes & Setup UI section by user request) ----------
+# The "Notes & Setup" section has been intentionally removed from display.
+# If you'd like it back for admins, I can add it behind a secret toggle.
