@@ -327,7 +327,81 @@ with col1:
         st.info("No images found. Add files to the `gallery/` folder.")
     else:
         # Show a compact preview strip (small thumbnails)
-        for i, img in enumerate(images):
+        for i, img in enumerate(images):# ---------- Gallery: create an HTML masonry-style grid with lightbox (images base64-embedded) ----------
+images = get_gallery_images()
+
+def make_base64(img_path):
+    try:
+        with open(img_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+            ext = os.path.splitext(img_path)[1].lower().replace('.', '')
+            return f"data:image/{ext};base64,{data}"
+    except Exception:
+        return None
+
+if images:
+    # Build HTML gallery
+    gallery_items = []
+    for p in images:
+        b64 = make_base64(p)
+        if not b64:
+            continue
+        name = os.path.basename(p)
+        item_html = f"""
+        <div class='gallery-item'>
+            <img src="{b64}" alt="{name}" loading="lazy" onclick="openLightbox(this.src)" />
+        </div>
+        """
+        gallery_items.append(item_html)
+
+    gallery_html = """
+    <div style='padding:18px 6px;'>
+        <h2 style='margin:6px 0 14px 6px; color:#2b2b2f;'>My Gallery</h2>
+        <div class='gallery-grid'>
+            """ + "".join(gallery_items) + """
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id='ps-lightbox' 
+         style='display:none; position:fixed; inset:0; z-index:9999; 
+                align-items:center; justify-content:center; 
+                background: rgba(8,10,14,0.6);'>
+        <div style='position:relative; max-width:92%; max-height:92%;
+                    display:flex; align-items:center; justify-content:center;'>
+            <img id='pslb-img' src='' 
+                 style='max-width:100%; max-height:100%; border-radius:12px;
+                        box-shadow:0 30px 80px rgba(0,0,0,0.6);' />
+            <button onclick='closeLightbox()'
+                    style='position:absolute; right:-8px; top:-8px;
+                           background:#fff; border-radius:999px; border:none;
+                           padding:8px 10px; cursor:pointer; font-weight:700;'>✕</button>
+        </div>
+    </div>
+
+    <script>
+        function openLightbox(src){
+            const lb = document.getElementById("ps-lightbox");
+            const img = document.getElementById("pslb-img");
+            img.src = src;
+            lb.style.display = "flex";
+        }
+
+        function closeLightbox(){
+            document.getElementById("ps-lightbox").style.display = "none";
+        }
+
+        document.addEventListener("keydown", function(e){
+            if (e.key === "Escape") closeLightbox();
+        });
+    </script>
+    """
+
+    st.markdown(gallery_html, unsafe_allow_html=True)
+
+else:
+    st.info("No gallery images found. Add images to the `gallery/` folder (jpg, png, webp).")
+
             st.image(img, width=200, caption=os.path.basename(img))
             if i >= 3:
                 break
