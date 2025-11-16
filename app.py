@@ -1,4 +1,4 @@
-# app.py — Final premium "FAANG-style mix" (Hero from preview + Gallery C3 + Chatbot A)
+# app.py — Final FAANG-style portfolio (Hero + Gallery + Premium Chatbot)
 import os
 import re
 import time
@@ -7,36 +7,41 @@ import streamlit as st
 from markdown import markdown
 import streamlit.components.v1 as components
 
-# Page config
+# ---------------- Page config ----------------
 st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
-# ---------- Helper paths & utilities ----------
+# ---------------- Paths & helpers ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
+
 def get_gallery_images():
-    """Return list of image file paths from gallery folder (sorted)."""
+    """Return sorted list of image paths in gallery folder."""
     if not os.path.exists(GALLERY_DIR):
         return []
     files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
     files.sort()
     return [os.path.join(GALLERY_DIR, f) for f in files]
 
+
 def to_base64(path):
-    """Return data URL (base64) for given image path. Returns None on error."""
+    """Return base64 data URL for an image path or None on error."""
     try:
         with open(path, "rb") as fh:
-            data = base64.b64encode(fh.read()).decode("utf-8")
+            raw = fh.read()
+        data = base64.b64encode(raw).decode("utf-8")
         ext = os.path.splitext(path)[1].lower().replace(".", "")
-        # fallback ext mapping
-        if ext == "jpg": ext = "jpeg"
+        # normalize jpg -> jpeg
+        if ext == "jpg":
+            ext = "jpeg"
         return f"data:image/{ext};base64,{data}"
     except Exception:
         return None
 
+
 def get_post_data(slug):
-    """Parse a markdown post with optional YAML-like meta at top."""
+    """Read markdown post and extract simple YAML-like meta block if present."""
     file_path = os.path.join(POSTS_DIR, f"{slug}.md")
     if not os.path.exists(file_path):
         return None
@@ -62,8 +67,9 @@ def get_post_data(slug):
         "html": html,
     }
 
+
 def get_all_posts():
-    """Return list of parsed posts (dicts)."""
+    """Return list of parsed posts found in blog_posts/"""
     if not os.path.exists(POSTS_DIR):
         return []
     md_files = [f for f in os.listdir(POSTS_DIR) if f.endswith(".md")]
@@ -75,7 +81,8 @@ def get_all_posts():
             posts.append(data)
     return posts
 
-# ---------- HERO (FAANG-like pastel, Sora font style) ----------
+
+# ---------------- HERO (FAANG-like pastel + Sora font) ----------------
 hero_html = '''
 <!doctype html>
 <html>
@@ -86,7 +93,7 @@ hero_html = '''
 <style>
 :root{
   --p1:#fbe9f9; --p2:#eaf6ff; --p3:#f7f0ff;
-  --accent: #7b44e5;
+  --accent:#7b44e5;
   --card: rgba(255,255,255,0.74);
 }
 *{box-sizing:border-box}
@@ -195,13 +202,12 @@ document.addEventListener("mousemove", (e) => {
 </body>
 </html>
 '''
-# Render hero
+# render hero component
 components.html(hero_html, height=760, scrolling=False)
 
-# ---------- Inject hero preview images (first 3 gallery images) ----------
-images = get_gallery_images()  # gather images here once for reuse
+# ---------------- Inject hero preview images (first 3 gallery images) ----------------
+images = get_gallery_images()
 
-# build small JS injection to populate p1/p2/p3 or hide if missing
 inject_parts = []
 for i in range(3):
     if i < len(images):
@@ -216,26 +222,26 @@ for i in range(3):
 inject_js = "<script>" + "".join(inject_parts) + "</script>"
 st.markdown(inject_js, unsafe_allow_html=True)
 
-# ---------- Global Streamlit CSS (theme consistency) ----------
+
+# ---------------- Global theme CSS for Streamlit area ----------------
 st.markdown("""
 <style>
-/* make Streamlit app background match hero */
 .stApp {
   background: linear-gradient(180deg, rgba(234,246,255,0.95), rgba(247,240,255,0.96)) !important;
   color: #111;
 }
-/* glassy cards behavior */
+/* glassy card style */
 .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
   background: rgba(255,255,255,0.78) !important;
   border: 1px solid rgba(255,255,255,0.66);
   box-shadow: 0 12px 30px rgba(12,12,18,0.04);
   backdrop-filter: blur(8px) !important;
 }
-/* headings */
 .css-10trblm.egzxvld1 { color:#18181b; }
 .stMarkdown { color:#222; }
 a { color: #7b44e5 !important; }
-/* ensure gallery grid classes used in injected html are visible */
+
+/* ensure gallery classes are styled when HTML is injected */
 .gallery-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:18px; align-items:start; }
 .gallery-item { border-radius:14px; overflow:hidden; box-shadow: 0 10px 30px rgba(16,18,26,0.06); transition: transform .25s ease, box-shadow .25s ease; background: white;}
 .gallery-item img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .45s ease; }
@@ -244,7 +250,8 @@ a { color: #7b44e5 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- Content area: Writings & Projects ----------
+
+# ---------------- Content: Writings & Projects ----------------
 st.markdown("---")
 st.header("Writings & Projects")
 st.subheader("Latest Writings")
@@ -264,21 +271,22 @@ st.markdown("""
 - Chatbot Website (this site)  
 - Portfolio Builder  
 - AI Experiments  
-(Add more project details in code or link to GitHub.)
+(You can add project details or link to repositories.)
 """)
 
 st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
 st.header("Contact")
 st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryansharmax26)")
 
-# ---------- PART 2: Gallery Section (C3) ----------
+
+# ---------------- Gallery (C3) ----------------
 st.markdown("---")
 st.markdown("<a id='gallery'></a>", unsafe_allow_html=True)
 st.header("Gallery")
+
 if not images:
     st.info("No gallery images found. Add images (jpg, png, webp) to the `gallery/` folder.")
 else:
-    # build gallery html (base64 embedded)
     gallery_items = []
     for p in images:
         b64 = to_base64(p)
@@ -331,7 +339,8 @@ else:
     """
     st.markdown(gallery_html, unsafe_allow_html=True)
 
-# ---------- PART 3: Premium Soft Pastel Chatbot (Style A, Fade + Slide) ----------
+
+# ---------------- Premium Floating Chatbot (Style A) ----------------
 chat_html = '''
 <style>
 #aryan-chat-float { position: fixed; right: 28px; bottom: 28px; z-index: 999999; font-family: 'Sora', sans-serif; }
@@ -360,8 +369,6 @@ chat_html = '''
 #aryan-chat-input-wrap { display:flex; gap:8px; padding:12px; background:#071014; }
 #aryan-chat-input { flex:1; padding:10px; border-radius:8px; border:none; background:#0f1416; color:#dbefff; }
 #aryan-chat-send { padding:10px 12px; border-radius:8px; border:none; background:linear-gradient(90deg,#ffd6eb,#dfe9ff); color:#14121a; font-weight:800; cursor:pointer; }
-
-/* small responsiveness */
 @media (max-width:480px){
   #aryan-chat-box { right: 12px; left:12px; width: auto; bottom: 90px; }
   #aryan-chat-btn { width:58px; height:58px; font-size:14px; }
@@ -424,7 +431,6 @@ chat_html = '''
 
   function openBox(){
     box.style.display = 'block';
-    // animate in
     requestAnimationFrame(()=>{ box.style.opacity=1; box.style.transform='translateY(0)'; });
     if (!body.hasChildNodes()) addMessage("Hi! Ask me about Aryan ☕", 'bot');
     input.focus();
@@ -454,6 +460,7 @@ chat_html = '''
 '''
 components.html(chat_html, height=10, scrolling=False)
 
-# ---------- Footer ----------
+
+# ---------------- Footer ----------------
 st.markdown("---")
-st.markdown(f"<div style='text-align:center; opacity:0.75; padding:18px 0;'>© {time.strftime('%Y')} Aryan Sharma — Built with ☕</div>", unsafe_allow_html=True)
+st.markdown(f"<div style='text-align:center; opacity:0.78; padding:16px 0;'>© {time.strftime('%Y')} Aryan Sharma — Built with ☕</div>", unsafe_allow_html=True)
