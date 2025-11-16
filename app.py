@@ -1,60 +1,45 @@
-# ---------------------------------------------------------------
-# Aryan Sharma – Premium Portfolio + Gallery + Chatbot (FAANG Style)
-# ---------------------------------------------------------------
-
+# app.py - Final premium portfolio + gallery + chatbot (ready to paste)
 import os
 import re
+import json
 import time
 import base64
 import streamlit as st
 from markdown import markdown
 import streamlit.components.v1 as components
 
-# ---------- PAGE CONFIG ----------
-st.set_page_config(
-    page_title="Aryan Sharma",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+# ---------------- Page config ----------------
+st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
-# ---------- PATHS ----------
+# ---------------- Paths ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
+os.makedirs(GALLERY_DIR, exist_ok=True)
+os.makedirs(POSTS_DIR, exist_ok=True)
 
-# ---------- HELPERS ----------
+# ---------------- Helpers ----------------
 def get_gallery_images():
+    """Return list of image file paths inside gallery/ (jpg/png/webp etc)."""
     if not os.path.exists(GALLERY_DIR):
         return []
-    files = [f for f in os.listdir(GALLERY_DIR)
-             if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
+    files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
     files.sort()
-    return [os.path.join(GALLERY_DIR, f) for f in files]
+    return [os.path.join("gallery", f) for f in files]  # return relative paths for Streamlit
 
-
-def make_base64(img_path):
-    try:
-        with open(img_path, "rb") as f:
-            data = base64.b64encode(f.read()).decode("utf-8")
-        ext = os.path.splitext(img_path)[1].lower().replace(".", "")
-        return f"data:image/{ext};base64,{data}"
-    except:
-        return None
-
+def read_markdown_file(path):
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
 
 def get_post_data(slug):
     file_path = os.path.join(POSTS_DIR, f"{slug}.md")
     if not os.path.exists(file_path):
         return None
-
-    with open(file_path, "r", encoding="utf-8") as fh:
-        content = fh.read()
-
+    content = read_markdown_file(file_path)
     meta = {}
     body = content
     meta_match = re.match(r'---\n(.*?)\n---', content, re.DOTALL)
-
     if meta_match:
         meta_block = meta_match.group(1)
         for line in meta_block.splitlines():
@@ -62,360 +47,331 @@ def get_post_data(slug):
                 k, v = line.split(":", 1)
                 meta[k.strip()] = v.strip()
         body = content[meta_match.end():].strip()
-
     html = markdown(body)
     return {
         "slug": slug,
-        "title": meta.get("title", slug.replace("-", " ").capitalize()),
+        "title": meta.get("title", slug.replace("-", " ").title()),
         "date": meta.get("date", ""),
         "author": meta.get("author", ""),
         "summary": meta.get("summary", ""),
         "html": html,
     }
 
-
 def get_all_posts():
     if not os.path.exists(POSTS_DIR):
         return []
-    md_files = [f for f in os.listdir(POSTS_DIR) if f.endswith(".md")]
+    md_files = [f for f in sorted(os.listdir(POSTS_DIR)) if f.endswith(".md")]
     posts = []
-    for f in md_files:
-        data = get_post_data(f[:-3])
+    for m in md_files:
+        slug = m[:-3]
+        data = get_post_data(slug)
         if data:
             posts.append(data)
     return posts
 
+# ---------------- Inline utility for small Data-URL fallback (rare) ----------------
+def make_data_url(rel_path):
+    try:
+        real = os.path.join(BASE_DIR, rel_path)
+        with open(real, "rb") as fh:
+            data = base64.b64encode(fh.read()).decode("utf-8")
+        ext = os.path.splitext(real)[1].lstrip(".").lower()
+        if ext == "jpg": ext = "jpeg"
+        return f"data:image/{ext};base64,{data}"
+    except Exception:
+        return ""
 
-# ---------------------------------------------------------------
-# ⭐ HERO SECTION (FAANG GRADE — SMOOTH PARALLAX + TYPEWRITER)
-# ---------------------------------------------------------------
-hero_html = """
+# ---------------- Prepare gallery list and hero preview images ----------------
+images = get_gallery_images()  # relative paths like "gallery/filename.jpg"
+# Choose hero previews as: first, second, third (user chose 1,2,3). If missing, fallback gracefully.
+hero_preview = []
+for i in range(3):
+    if i < len(images):
+        hero_preview.append(images[i])
+    else:
+        hero_preview.append("")  # empty string -> will hide that preview in hero JS
+
+# For the gallery viewer thumbnails (we'll use the same images list)
+viewer_items = images.copy()
+
+# JSON encode viewer items safely for injecting into JS
+viewer_items_json = json.dumps(viewer_items)  # safe serialization
+
+# ---------------- HERO (components.html) ----------------
+# Hero HTML/CSS/JS uses the three hero_preview images (relative paths) and typewriter/parallax.
+# We use json.dumps to pass hero_preview list safely to the component and then assign sources in JS.
+
+hero_component = f"""
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&display=swap" rel="stylesheet">
-
 <style>
-body { margin:0; padding:0; font-family:'Inter',sans-serif; background:transparent; }
-
-/* pastel animated background */
-.bg {
-  position:fixed; inset:0;
-  background: linear-gradient(135deg,#fbe9f9,#eaf6ff,#f7f0ff,#ffe9f5);
-  background-size:400% 400%;
-  animation:bgMove 16s ease infinite;
-  z-index:0;
-}
-@keyframes bgMove {
-  0% {background-position:0% 50%;}
-  50% {background-position:100% 50%;}
-  100% {background-position:0% 50%;}
-}
-
-/* hero card */
-.hero {
-  position:relative; z-index:5;
-  margin:120px auto;
-  width:86%; max-width:1180px;
-  background:rgba(255,255,255,0.72);
-  border-radius:24px;
-  padding:60px 60px 80px;
-  box-shadow:0 30px 80px rgba(0,0,0,0.15);
-  backdrop-filter:blur(14px);
-  transform-style:preserve-3d;
-  transition:transform .12s ease-out;
-}
-
-h1 { font-size:56px; font-weight:800; margin:0; color:#16161a; }
-p { font-size:20px; color:#444; max-width:700px; }
-
-.role-badge {
-  display:inline-block;
-  padding:10px 18px;
-  border-radius:999px;
-  background:linear-gradient(90deg,#e8d3ff,#ffd5ef);
-  color:#5a2ea6; font-weight:700;
-  margin-top:12px; font-size:18px;
-}
-
-/* buttons */
-.btn {
-  padding:14px 24px;
-  border-radius:999px;
-  font-weight:700;
-  border:none;
-  cursor:pointer;
-  margin-right:12px;
-  margin-top:20px;
-  font-size:16px;
-}
-.fill { background:linear-gradient(90deg,#ffd6eb,#dfe9ff); color:#111; }
-.outline { background:transparent; border:2px solid #999; color:#333; }
-
-/* right preview images */
-.prev-wrap {
-  position:absolute; right:40px; top:40px;
-  display:flex; gap:14px;
-}
-.prev {
-  width:120px; height:120px;
-  background:#fff; border-radius:14px; overflow:hidden;
-  box-shadow:0 10px 30px rgba(0,0,0,0.18);
-}
-.prev img { width:100%; height:100%; object-fit:cover; }
-
-/* parallax */
+  :root{{--p1:#fbe9f9;--p2:#eaf6ff;--p3:#f7f0ff;--accent:#7b44e5}}
+  html,body{{height:100%;margin:0;padding:0;background:transparent;font-family:'Inter',sans-serif}}
+  .bg{{position:fixed;inset:0;z-index:0;background:linear-gradient(135deg,var(--p2),var(--p3),var(--p1));background-size:400% 400%;animation:bgMove 16s linear infinite}}
+  @keyframes bgMove{{0%{{background-position:0% 50%}}50%{{background-position:100% 50%}}100%{{background-position:0% 50%}}}}
+  .stage{{position:relative;z-index:2;min-height:76vh;display:flex;align-items:center;justify-content:center;padding:48px;box-sizing:border-box}}
+  .card{{width:92%;max-width:1200px;border-radius:22px;padding:54px;background:rgba(255,255,255,0.78);box-shadow:0 30px 80px rgba(6,6,8,0.06);backdrop-filter:blur(12px)}}
+  .card h3{{margin:0;color:#777;font-weight:600}} .card h1{{margin:6px 0 0 0;font-size:56px;font-weight:800;color:#16161a}}
+  .lead{{margin-top:12px;color:#404345;font-size:18px;max-width:78%}}
+  .role{{display:inline-block;margin-top:14px;padding:10px 16px;border-radius:999px;background:linear-gradient(90deg, rgba(123,68,229,0.12), rgba(123,68,229,0.06));color:var(--accent);font-weight:700}}
+  .actions{{margin-top:22px;display:flex;gap:12px;align-items:center}}
+  .btn{{padding:12px 18px;border-radius:999px;border:none;cursor:pointer;font-weight:700}}
+  .btn.fill{{background:linear-gradient(90deg,#ffd6eb,#dfe9ff);color:#111}}
+  .btn.ghost{{background:transparent;border:1px solid rgba(0,0,0,0.06);color:#333}}
+  .previews{{position:absolute;right:36px;top:32px;display:flex;gap:12px}}
+  .prev{{width:120px;height:120px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 12px 36px rgba(6,6,8,0.08)}}
+  .prev img{{width:100%;height:100%;object-fit:cover;display:block}}
+  @media(max-width:980px){{.previews{{display:none}} .card h1{{font-size:36px}}}}
 </style>
 </head>
-
 <body>
-
-<div class="bg"></div>
-
-<div class="hero" id="heroCard">
-  <h3 style="color:#777;margin:0 0 6px;">Hello, I'm</h3>
-  <h1>Aryan Sharma</h1>
-  <p>I turn everyday life into little stories—coffee-powered, curious, and always building.</p>
-
-  <div class="role-badge" id="role">Tech Enthusiast</div>
-
-  <div>
-    <button class="btn fill">View Projects</button>
-    <button class="btn outline">Contact</button>
+  <div class="bg"></div>
+  <div class="stage">
+    <div class="card" id="heroCard">
+      <h3>Hello, I'm</h3>
+      <h1>Aryan Sharma</h1>
+      <p class="lead">I turn everyday life into little stories—coffee-powered, curious, and always building.</p>
+      <div class="role" id="role">Creative Storyteller</div>
+      <div class="actions">
+        <button class="btn fill" onclick="location.href='#projects'">View Projects</button>
+        <button class="btn ghost" onclick="location.href='#contact'">Contact</button>
+      </div>
+      <div class="previews" aria-hidden="true">
+        <div class="prev"><img id="ph1" src="" alt="preview 1"/></div>
+        <div class="prev"><img id="ph2" src="" alt="preview 2"/></div>
+        <div class="prev"><img id="ph3" src="" alt="preview 3"/></div>
+      </div>
+    </div>
   </div>
-
-  <div class="prev-wrap">
-    <div class="prev"><img id="ph1"></div>
-    <div class="prev"><img id="ph2"></div>
-    <div class="prev"><img id="ph3"></div>
-  </div>
-</div>
 
 <script>
-/* typewriter names */
-const roles = ["Tech Enthusiast","AI Learner","Creative Storyteller","Coffee-Powered Human ☕"];
-let i=0,p=0,fwd=true;
-const r = document.getElementById("role");
-
-function tick(){
-  const txt = roles[i];
-  if(fwd){
-    p++;
-    if(p===txt.length) { fwd=false; setTimeout(tick,900); return; }
-  } else {
-    p--;
-    if(p===0){ fwd=true; i=(i+1)%roles.length; }
+  // Typewriter for role
+  const roles = ["Creative Storyteller","Tech Enthusiast","AI Learner","Coffee-Powered Human ☕"];
+  let ridx=0, rpos=0, rfor=true;
+  const roleEl = document.getElementById('role');
+  function typeTick(){
+    const cur = roles[ridx];
+    if(rfor){ rpos++; roleEl.textContent = cur.slice(0,rpos); if(rpos===cur.length){ rfor=false; setTimeout(typeTick,900); return; } }
+    else { rpos--; roleEl.textContent = cur.slice(0,rpos); if(rpos===0){ rfor=true; ridx=(ridx+1)%roles.length; setTimeout(typeTick,400); return; } }
+    setTimeout(typeTick,60);
   }
-  r.textContent = txt.slice(0,p);
-  setTimeout(tick,60);
-}
-tick();
+  typeTick();
 
-/* parallax */
-const card = document.getElementById("heroCard");
-document.addEventListener("mousemove", e => {
-  const x = (window.innerWidth/2 - e.clientX) / 40;
-  const y = (window.innerHeight/2 - e.clientY) / 40;
-  card.style.transform = `perspective(1200px) rotateY(${x}deg) rotateX(${y}deg)`;
-});
+  // Parallax
+  const hero = document.getElementById('heroCard');
+  document.addEventListener('mousemove', (e) => {
+    const x = (window.innerWidth/2 - e.clientX) / 40;
+    const y = (window.innerHeight/2 - e.clientY) / 40;
+    hero.style.transform = `perspective(900px) rotateY(${x}deg) rotateX(${y}deg)`;
+  });
+
+  // assign hero preview images passed from Streamlit
+  const previews = {json.dumps(hero_preview)};
+  // set images if non-empty; otherwise hide the preview slot
+  for(let i=0;i<3;i++){
+    const el = document.getElementById('ph'+(i+1));
+    if(previews[i] && previews[i].length>0){
+      el.src = previews[i];
+    } else {
+      // hide parent preview container if no image
+      el.parentElement.style.display = 'none';
+    }
+  }
 </script>
-
 </body>
 </html>
 """
 
-components.html(hero_html, height=780, scrolling=False)
+# Render hero
+components.html(hero_component, height=760, scrolling=False)
 
-# ---------------------------------------------------------------
-#  ⭐ GLOBAL STYLING FOR STREAMLIT AREA
-# ---------------------------------------------------------------
+# ---------------- Global streamlit css ----------------
 st.markdown("""
 <style>
-.stApp {
-    background: linear-gradient(135deg,#fbe9f9,#eaf6ff,#f7f0ff,#ffe9f5) !important;
-}
-.gallery-grid {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-    gap:22px;
-    padding:20px;
-}
-.g-item {
-    border-radius:16px;
-    overflow:hidden;
-    box-shadow:0 10px 30px rgba(0,0,0,0.18);
-    cursor:pointer;
-    transition:.25s;
-}
-.g-item:hover { transform:translateY(-6px) scale(1.03); }
-.g-item img { width:100%; height:100%; object-fit:cover; }
-
-/* chat bubble */
-#chatFloat {
-    position:fixed;
-    right:26px;
-    bottom:26px;
-    z-index:9999;
-}
-.chat-btn {
-    width:68px;height:68px;
-    border-radius:999px;border:none;
-    cursor:pointer;font-size:28px;
-    background:linear-gradient(135deg,#ffd6f7,#e5dbff);
-    box-shadow:0 12px 40px rgba(0,0,0,0.26);
-}
+.stApp { background: linear-gradient(180deg,#fbe9f9,#eaf6ff,#f7f0ff) !important; }
+.stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 { background: rgba(255,255,255,0.82) !important; border:1px solid rgba(255,255,255,0.7); box-shadow:0 12px 30px rgba(6,6,8,0.04); backdrop-filter: blur(8px); }
+header[role="banner"] { display:none; } /* optional: hide default header */
 </style>
 """, unsafe_allow_html=True)
 
-
-# ---------------------------------------------------------------
-# ⭐ GALLERY SECTION
-# ---------------------------------------------------------------
-st.markdown("## 📸 My Gallery")
-
-images = get_gallery_images()
-
-if images:
-    g_html = "<div class='gallery-grid'>"
-
-    for p in images:
-        b64 = make_base64(p)
-        if b64:
-            g_html += f"""
-            <div class='g-item' onclick="document.getElementById('lbImg').src='{b64}';document.getElementById('lb').style.display='flex';">
-                <img src='{b64}' />
-            </div>
-            """
-
-    g_html += "</div>"
-
-    g_html += """
-    <div id="lb" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); z-index:99999; align-items:center; justify-content:center;">
-        <img id="lbImg" style="max-width:92%; max-height:92%; border-radius:18px;" />
-        <button onclick="document.getElementById('lb').style.display='none';"
-            style="position:absolute; top:22px; right:22px; background:#fff; font-size:22px; border-radius:999px; padding:10px 14px;">✕</button>
-    </div>
-    """
-
-    st.markdown(g_html, unsafe_allow_html=True)
-else:
-    st.info("Add images to the `gallery` folder.")
-
-
-
-# ---------------------------------------------------------------
-# ⭐ BLOG SECTION
-# ---------------------------------------------------------------
+# ---------------- Gallery section (streamlit-rendered thumbnails + lightbox hook) ----------------
 st.markdown("---")
-st.markdown("## ✍️ Writings")
+st.markdown("<h2 style='margin-bottom:8px;'>📸 My Gallery</h2>", unsafe_allow_html=True)
 
+if not images:
+    st.info("No images found. Add JPG/PNG/WebP files to the `gallery/` folder in your repo.")
+else:
+    # Build a simple grid with 3 columns for thumbnails (Streamlit images)
+    cols = st.columns(3)
+    for idx, rel in enumerate(images):
+        col = cols[idx % 3]
+        caption = os.path.basename(rel)
+        try:
+            # display using relative path so deployed app serves the file
+            with col:
+                st.image(rel, caption=caption, use_column_width=True)
+        except Exception:
+            # fallback: if path serving fails, try to create data URL and show
+            data_url = make_data_url(rel)
+            if data_url:
+                with col:
+                    st.image(data_url, caption=caption, use_column_width=True)
+            else:
+                with col:
+                    st.write("Unable to show", caption)
+
+    # inject a viewer (lightbox) that opens any clicked image src (best-effort).
+    viewer_js = f"""
+    <div id="viewer" style="display:none; position:fixed; inset:0; z-index:99999; align-items:center; justify-content:center; background:rgba(0,0,0,0.75);">
+      <div style="position:relative; max-width:92%; max-height:92%; display:flex; align-items:center; justify-content:center;">
+        <img id="viewer-img" src="" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow:0 30px 90px rgba(0,0,0,0.6);" />
+        <button onclick="document.getElementById('viewer').style.display='none'" style="position:absolute; right:-12px; top:-12px; background:#fff; border-radius:999px; border:none; padding:8px 10px; cursor:pointer; font-weight:700;">✕</button>
+      </div>
+    </div>
+
+    <script>
+      (function(){
+        // Attach click handlers to images on the page (heuristic)
+        setTimeout(()=>{
+          document.querySelectorAll('img').forEach(img=>{
+            img.style.cursor = 'zoom-in';
+            img.addEventListener('click', function(e){
+              // avoid clicking small UI images (heuristic: skip if width < 80)
+              try{
+                const w = img.naturalWidth || img.width;
+                if(w < 80) return;
+              }catch(e){}
+              const viewer = document.getElementById('viewer');
+              document.getElementById('viewer-img').src = img.src;
+              viewer.style.display = 'flex';
+            });
+          });
+        }, 400);
+        // close on escape
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ const v=document.getElementById('viewer'); if(v) v.style.display='none'; } });
+      })();
+    </script>
+    """
+    st.markdown(viewer_js, unsafe_allow_html=True)
+
+# ---------------- Writings / Projects ----------------
+st.markdown("---")
+st.header("✍️ Writings & Projects")
 posts = get_all_posts()
 if not posts:
-    st.info("No blog posts found yet.")
+    st.info("No posts yet. Add `.md` files to the `blog_posts/` folder.")
 else:
     for p in posts:
         st.subheader(p["title"])
-        st.caption(p["date"])
+        if p.get("date"): st.caption(p["date"])
         st.markdown(p["html"], unsafe_allow_html=True)
         st.markdown("---")
 
+st.markdown("<a id='projects'></a>", unsafe_allow_html=True)
+st.markdown("### Projects")
+st.write("- Chatbot Website\n- Portfolio Builder\n- AI Experiments")
 
-
-# ---------------------------------------------------------------
-# ⭐ CHATBOT (Floating Bubble)
-# ---------------------------------------------------------------
+# ---------------- Chatbot (components.html) ----------------
+# Bubble text chosen by user: "Ask me about Aryan ☕"
 chat_html = """
-<div id="chatFloat">
-  <button class="chat-btn" onclick="toggleChat()">💬</button>
+<div id="chat-root" style="position:fixed; right:22px; bottom:22px; z-index:1000000; font-family:Inter, sans-serif;">
+  <button id="chat-btn" aria-label="Ask me about Aryan" style="width:72px;height:72px;border-radius:999px;border:none;background:linear-gradient(135deg,#ffd6f7,#e5dbff);box-shadow:0 12px 40px rgba(0,0,0,0.12);font-weight:800;cursor:pointer;">Ask me about Aryan ☕</button>
 
-  <div id="chatBox" 
-       style="display:none; position:fixed; right:26px; bottom:110px; width:360px; 
-              background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.25); 
-              overflow:hidden;">
-
-      <div style="background:#18181b; color:#fff; padding:14px; font-weight:800;">
-        Ask me about Aryan ☕
-      </div>
-
-      <div id="chatMessages" style="height:260px; overflow-y:auto; padding:12px; background:#f5f5f7;"></div>
-
-      <div style="display:flex; padding:10px; gap:8px;">
-        <input id="chatInput" placeholder="Type a question..." 
-               style="flex:1; padding:10px; border-radius:10px; border:1px solid #ccc;">
-        <button onclick="sendMsg()" 
-                style="padding:10px 14px; border-radius:10px; border:none; background:#7b44e5; color:white;">
-                Send
-        </button>
-      </div>
+  <div id="chat-box" style="display:none; position:fixed; right:22px; bottom:110px; width:360px; max-width:calc(100% - 44px); border-radius:12px; overflow:hidden; box-shadow:0 30px 80px rgba(6,6,8,0.3);">
+    <div style="background:linear-gradient(90deg,#061014,#081218); color:#bfefff; font-weight:800; padding:12px 14px;">Ask me about Aryan ☕</div>
+    <div id="chat-body" style="padding:12px; max-height:300px; overflow:auto; background:#f5f7fb;"></div>
+    <div style="display:flex; gap:8px; padding:10px; background:#f5f7fb;">
+      <input id="chat-input" placeholder="Type a question..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+      <button id="chat-send" style="padding:10px 12px; border-radius:8px; background:#7b44e5; color:#fff; border:none; font-weight:700;">Send</button>
+    </div>
   </div>
 </div>
 
 <script>
-function toggleChat(){
-  let box = document.getElementById("chatBox");
-  box.style.display = box.style.display === "none" ? "block" : "none";
-}
+(function(){
+  const data = {
+    "who is aryan":"Aryan is that guy who turns everyday moments into funny stories without even trying.",
+    "what is aryan currently studying":"Pursuing a Bachelor's degree. 🎓",
+    "what makes aryan smile":"Random jokes, good coffee, and accidental life plot twists.",
+    "coffee":"Coffee ☕. Without it, Aryan is basically on airplane mode.",
+    "does aryan like travelling":"Yes — especially when the trip ends with coffee and mountain views.",
+    "what is aryan good at":"Turning simple moments into mini stories and making people laugh randomly."
+  };
 
-function addMsg(text, who="bot"){
-  let wrap = document.getElementById("chatMessages");
-  let div = document.createElement("div");
-  div.style.margin = "6px 0";
-  div.style.padding = "10px 14px";
-  div.style.maxWidth = "80%";
-  div.style.borderRadius = "12px";
-  div.style.fontSize = "14px";
+  const btn = document.getElementById('chat-btn');
+  const box = document.getElementById('chat-box');
+  const body = document.getElementById('chat-body');
+  const input = document.getElementById('chat-input');
+  const send = document.getElementById('chat-send');
 
-  if(who==="user"){
-    div.style.background="#dfe3ff";
-    div.style.marginLeft="20%";
-  } else {
-    div.style.background="#ececec";
+  btn.addEventListener('click', ()=> {
+    box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    input.focus();
+    if(!body.hasChildNodes()){
+      addMsg("Hi! Ask me about Aryan ☕", "bot");
+    }
+  });
+
+  function addMsg(text, who){
+    const el = document.createElement('div');
+    el.style.margin = '8px 0';
+    el.style.padding = '10px 12px';
+    el.style.borderRadius = '10px';
+    el.style.maxWidth = '80%';
+    el.style.fontSize = '14px';
+    if(who === 'user'){
+      el.style.background = '#dfe6ff';
+      el.style.marginLeft = '20%';
+      el.style.color = '#041022';
+    } else {
+      el.style.background = '#ffffff';
+      el.style.color = '#061018';
+    }
+    el.textContent = text;
+    body.appendChild(el);
+    body.scrollTop = body.scrollHeight;
   }
 
-  div.textContent = text;
-  wrap.appendChild(div);
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-const data = {
-  "who is aryan": "Aryan is a calm, creative guy who turns moments into stories.",
-  "what does aryan like": "Coffee, clean aesthetics, tech and learning new things.",
-  "what motivates aryan": "Good ideas, good music and good coffee.",
-};
-
-function reply(q){
-  q = q.toLowerCase();
-  for(const k in data){
-    if(q.includes(k)) return data[k];
+  function reply(q){
+    const t = q.toLowerCase();
+    for(const k in data){
+      if(t.includes(k)) return data[k];
+    }
+    if(t.includes('name')) return "Aryan Sharma — storyteller, coder, coffee-lover.";
+    if(t.includes('study') || t.includes('studying')) return data["what is aryan currently studying"];
+    if(t.includes('coffee')) return data["coffee"];
+    return "Ask me anything about Aryan ☕🙂!";
   }
-  if(q.includes("coffee")) return "Coffee is Aryan's superpower ☕.";
-  if(q.includes("study")) return "He is currently pursuing BCA.";
-  return "Ask me anything about Aryan ☕🙂!";
-}
 
-function sendMsg(){
-  let inp = document.getElementById("chatInput");
-  let txt = inp.value.trim();
-  if(!txt) return;
-  addMsg(txt, "user");
-  inp.value="";
-  setTimeout(()=>{ addMsg(reply(txt)); },400);
-}
+  function sendMsg(){
+    const txt = input.value.trim();
+    if(!txt) return;
+    addMsg(txt, 'user');
+    input.value = '';
+    setTimeout(()=>{ addMsg(reply(txt), 'bot'); }, 300 + Math.random()*300);
+  }
+
+  send.addEventListener('click', sendMsg);
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); sendMsg(); }
+  });
+
+})();
 </script>
 """
 
-components.html(chat_html, height=0, scrolling=False)
+# render chatbot as component (height small but scripts run)
+components.html(chat_html, height=1, scrolling=False)
 
-
-# ---------------------------------------------------------------
-# FOOTER
-# ---------------------------------------------------------------
+# ---------------- Footer ----------------
 st.markdown("---")
-st.header("Projects")
-st.write("- Chatbot Website\n- AI Experiments\n- Portfolio Designs")
-
+st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
 st.header("Contact")
-st.write("DM on Instagram: [aryanxsharma26](https://instagram.com/aryanxsharma26)")
+st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryansharmax26)")
+
+st.markdown(f"<div style='text-align:center; color:#666; padding:12px 0;'>© {time.strftime('%Y')} Aryan Sharma — Built with ☕</div>", unsafe_allow_html=True)
 
