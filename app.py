@@ -1,7 +1,8 @@
-# app.py
+# app.py  (Premium "Pinterest Soft Aesthetic" upgrade)
 import os
 import re
 import time
+import base64
 import streamlit as st
 from markdown import markdown
 import streamlit.components.v1 as components
@@ -19,7 +20,7 @@ def get_gallery_images():
         return []
     files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))]
     files.sort()
-    return [os.path.join("gallery", f) for f in files]
+    return [os.path.join(GALLERY_DIR, f) for f in files]
 
 
 def get_post_data(slug):
@@ -62,190 +63,313 @@ def get_all_posts():
     return posts
 
 
-# ---------- Chatbot knowledge (kept here for reference / future server-side use) ----------
-aryan_facts = {
-    "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
-    "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
-    "what makes aryan smile": "Random jokes, good coffee, and accidental life plot twists.",
-    "what’s aryan’s comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
-    "does aryan like travelling": "Yes! Especially when the trip ends with coffee and mountain views.",
-    "how does aryan handle pressure": "With calmness… and maybe two extra cups of coffee.",
-    "what is aryan good at": "Turning simple moments into mini stories and making people laugh randomly.",
-    "what’s aryan’s vibe": "Chill, creative, and always up for a good conversation.",
-    "is aryan an introvert or extrovert": "Somewhere in between—depends on the energy, the weather, and the wifi.",
-    "what motivates aryan": "New ideas, good music, and that one perfect cup of coffee.",
-    "how does aryan face challenges": "With confidence… and sarcasm when required.",
-    "what’s something aryan can’t live without": "Coffee. None 😅. But coffee keeps him warm, so no complaints.",
-    "what makes aryan unique": "His ability to make people laugh even when he’s not trying.",
-    "what’s aryan’s favorite weather": "Cold breeze + warm coffee = perfection.",
-    "how does aryan relax": "Storytelling, music, and wandering thoughts.",
-    "what is aryan passionate about": "Tech, creativity, and turning ideas into reality.",
-    "what is aryan learning right now": "New tech skills… one coffee at a time.",
-    "what type of person is aryan": "Calm, humorous, and secretly a deep thinker.",
-    "what’s aryan’s favourite thing to do": "Observe life and turn it into funny, relatable stories.",
-    "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
-}
-
-# ---------- Full-screen themed hero + popup chat (rendered via components.html) ----------
-# This hero_html contains:
-#  - animated gradient background
-#  - typewriter role line
-#  - neon/glass hero wrap
-#  - floating chat bubble with client-side JS (no server storage)
+# ---------- Soft / Pinterest-style Hero (components.html) ----------
+# Pastel gradient blobs, frosted card, soft typewriter + parallax
 hero_html = """
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg1:#ff6fb5;
-    --bg2:#845ef7;
-    --bg3:#7ad3ff;
+    --bg1: #fbe9f9;
+    --bg2: #eaf6ff;
+    --bg3: #f7f0ff;
+    --accent: rgba(123, 68, 229, 0.9);
+    --card-bg: rgba(255,255,255,0.65);
+    --glass-border: rgba(255,255,255,0.7);
+    --soft-shadow: 0 20px 50px rgba(21,24,30,0.06);
   }
-  html,body{height:100%;margin:0;padding:0;font-family:'Poppins',sans-serif;overflow-x:hidden;background:transparent;}
-  /* animated gradient background */
-  .page-bg{
-    position:fixed; inset:0; z-index:0;
-    background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
-    background-size: 400% 400%;
-    animation: gradientFlow 12s ease infinite;
-    filter: saturate(1.05);
+  html,body{height:100%;margin:0;padding:0;font-family:'Inter',system-ui,Arial,sans-serif;background:transparent;}
+  .canvas {
+    position:fixed; inset:0; z-index:0; overflow:hidden;
+    background: radial-gradient(circle at 10% 20%, #fff6ff 0%, transparent 15%),
+                radial-gradient(circle at 90% 80%, #f0fbff 0%, transparent 18%),
+                linear-gradient(180deg, var(--bg2) 0%, var(--bg3) 50%, var(--bg1) 100%);
   }
-  @keyframes gradientFlow {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+  /* soft blobs for depth */
+  .blob {
+    position:absolute; filter: blur(48px); opacity:0.85;
+    transform: translate3d(0,0,0);
   }
+  .b1{ width:520px; height:420px; left:-120px; top:-80px; background:linear-gradient(90deg,#ffdbe9,#eaf6ff);}
+  .b2{ width:420px; height:360px; right:-100px; top:40px; background:linear-gradient(90deg,#f6ecff,#e7f8ff);}
+  .b3{ width:360px; height:300px; left:10%; bottom:-80px; background:linear-gradient(90deg,#fff2ec,#f9f0ff);}
 
-  /* subtle starfield for depth */
-  .stars {
-    position:fixed; inset:0; z-index:1; pointer-events:none;
-    background-image: radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px);
-    background-size: 6px 6px; opacity: .10;
-    animation: twinkle 6s linear infinite;
-  }
-  @keyframes twinkle{
-    0%{opacity:.10}
-    50%{opacity:.06}
-    100%{opacity:.10}
-  }
-
-  /* hero container */
+  /* centered page container */
   .page {
     position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center;
-    padding:40px; box-sizing:border-box;
+    padding:48px; box-sizing:border-box;
   }
-  .hero-wrap{
-    width:86%; max-width:1100px; border-radius:24px; padding:48px; box-sizing:border-box;
+
+  .hero-card {
+    width:86%; max-width:1100px; border-radius:20px; padding:44px; box-sizing:border-box;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--soft-shadow);
     backdrop-filter: blur(10px) saturate(120%);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    box-shadow: 0 20px 50px rgba(10,10,20,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
-    border: 1px solid rgba(255,255,255,0.04);
-    text-align:center;
+    text-align:left; position:relative; overflow:hidden;
     transform-style: preserve-3d;
     transition: transform 0.12s ease-out;
-    position: relative;
   }
-  .hero-title{ margin:0; font-size:48px; font-weight:800;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2)); -webkit-background-clip:text; color:transparent;
-  }
-  .hero-sub{ margin-top:10px; color:#e6f7ff; font-size:18px; opacity:.95; }
-  .typewrap{ text-align:center; margin-top:14px; color:#cde8ff; font-weight:600; }
-  .roles { color:#ffd3f0; font-weight:700; font-size:18px; height:26px; display:inline-block; margin-left:6px; }
 
-  .cta-row{ display:flex; gap:14px; justify-content:center; margin-top:22px; }
+  .hero-left { display:flex; flex-direction:column; gap:12px; max-width:65%; }
+  .hi { font-size:16px; color:#6b6f77; margin:0; font-weight:500; }
+  .name { font-size:44px; margin:0; font-weight:800; color:#16161A; letter-spacing:-0.6px; }
+  .desc { color:#4a4d52; margin-top:6px; font-size:18px; max-width:80%; }
+  .typewrap { margin-top:14px; display:flex; gap:10px; align-items:center; font-weight:700; color:#6d6b7a; }
+  .roles { color: #7b44e5; background: linear-gradient(90deg, rgba(123,68,229,0.12), rgba(123,68,229,0.06)); padding:8px 12px; border-radius:999px; box-shadow: 0 6px 20px rgba(123,68,229,0.04); }
+
+  .hero-actions { margin-top:18px; display:flex; gap:12px; align-items:center; }
   .btn {
-    padding:12px 20px; border-radius:999px; border:none; cursor:pointer; font-weight:700; font-size:15px;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    padding:12px 18px; border-radius:999px; border:none; cursor:pointer; font-weight:700; font-size:15px;
+    background: linear-gradient(90deg,#ffd6eb,#dfe9ff);
+    color:#14121a; box-shadow: 0 8px 26px rgba(22,18,30,0.06);
   }
-  .btn-outline {
-    padding:12px 20px; border-radius:999px; border:1px solid rgba(255,255,255,0.08);
-    background:transparent; color:#d7d7ff; font-weight:700;
+  .btn-ghost {
+    padding:12px 18px; border-radius:999px; border:1px solid rgba(20,18,26,0.06);
+    background:transparent; color:#4a4d52; font-weight:700;
   }
 
-  /* floating bubble (bottom-right) */
-  .chat-bubble {
-    position:fixed; right:26px; bottom:26px; z-index:6;
-    width:64px; height:64px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(180deg,var(--bg2),var(--bg1));
-    box-shadow: 0 12px 40px rgba(10,10,20,0.45);
-    color:white; font-size:26px; cursor:pointer; transition: transform .18s ease;
+  /* right column - small preview cards */
+  .hero-right { position:absolute; right:32px; top:32px; display:flex; gap:12px; align-items:center; transform: translateZ(40px); }
+  .preview {
+    width:120px; height:120px; border-radius:14px; overflow:hidden; background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.45));
+    box-shadow: 0 10px 28px rgba(16,18,26,0.06); border:1px solid rgba(255,255,255,0.5);
   }
-  .chat-bubble:hover{ transform: translateY(-6px); }
+  .preview img { width:100%; height:100%; object-fit:cover; display:block; }
 
-  /* popup chat window (client-side only; DOES NOT store messages server-side) */
-  .chat-popup {
-    position:fixed; right:26px; bottom:100px; z-index:7; width:380px; max-width:92vw;
-    border-radius:14px; overflow:hidden; box-shadow: 0 30px 80px rgba(10,10,20,0.6);
-    display:none;
-    transform-origin: bottom right;
-  }
-  .chat-card {
-    background: linear-gradient(180deg, rgba(8,10,14,0.98), rgba(12,14,18,0.95));
-    color:#fff;
-    padding:12px; box-sizing:border-box;
-  }
-  .chat-header{ display:flex; justify-content:space-between; align-items:center; padding:6px 8px; }
-  .chat-title { color:#6ef0ff; font-weight:800; font-size:15px; }
-  .chat-close { background:transparent; border:none; color:#b9dff7; font-size:18px; cursor:pointer; }
-  .chat-messages { max-height:320px; overflow:auto; padding:8px; margin-top:8px; }
-  .msg { margin:8px 0; padding:10px 12px; border-radius:12px; display:inline-block; clear:both; max-width:85%; }
-  .msg.user { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); float:right; color:#fff; }
-  .msg.bot { background: linear-gradient(90deg, rgba(120,120,255,0.06), rgba(120,120,255,0.02)); float:left; color:#fff; }
-  .chat-input-row { display:flex; gap:8px; margin-top:10px; }
-  .chat-input { flex:1; padding:10px; border-radius:10px; border:none; background:#0f1113; color:#e6eef8; }
-  .chat-send { padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; cursor:pointer; font-weight:700; }
-
-  @media (max-width:800px){
-    .hero-title{ font-size:32px; }
-    .chat-popup { right:12px; left:12px; bottom:90px; width:calc(100% - 24px); }
-    .chat-bubble { right:12px; bottom:12px; }
+  /* responsive */
+  @media (max-width:900px){
+    .hero-card { padding:28px; }
+    .hero-left { max-width:100%; }
+    .name { font-size:34px; }
+    .hero-right{ display:none; }
   }
 </style>
 </head>
 <body>
-  <div class="page-bg"></div>
-  <div class="stars"></div>
-
-  <div class="page">
-    <div class="hero-wrap" id="parallaxHero" role="main" aria-label="hero">
-      <h1 class="hero-title">Aryan Sharma</h1>
-      <div class="hero-sub">Welcome to my personal website!</div>
-      <div class="typewrap">I'm a <span class="roles" id="role">tech enthusiast</span></div>
-      <div class="cta-row">
-        <button class="btn" onclick="location.href='#projects'">Download Resume</button>
-        <button class="btn-outline" onclick="location.href='#contact'">Get In Touch</button>
-      </div>
-    </div>
+  <div class="canvas">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
   </div>
 
-  <!-- floating chat bubble -->
-  <div class="chat-bubble" id="chatBubble" title="Ask me about Aryan">💬</div>
+  <div class="page">
+    <div class="hero-card" id="parallaxHero">
+      <div style="display:flex; gap:28px; align-items:flex-start;">
+        <div class="hero-left">
+          <div class="hi">Hello, I'm</div>
+          <h1 class="name">Aryan Sharma</h1>
+          <div class="desc">I turn everyday life into little stories—coffee-powered, curious, and always building.</div>
+          <div class="typewrap">I am a <span class="roles" id="typewriter">Tech Enthusiast</span></div>
 
-  <!-- popup chat (client-side only) -->
-  <div class="chat-popup" id="chatPopup" role="dialog" aria-modal="true" aria-label="Aryan chatbot popup">
-    <div class="chat-card">
-      <div class="chat-header">
-        <div class="chat-title">Ask me about Aryan ☕</div>
-        <div>
-          <button class="chat-close" id="minimizeBtn" title="Minimize">—</button>
-          <button class="chat-close" id="closeBtn" title="Close">✕</button>
+          <div class="hero-actions">
+            <button class="btn" onclick="location.href='#projects'">View Projects</button>
+            <button class="btn-ghost" onclick="location.href='#contact'">Contact</button>
+          </div>
         </div>
-      </div>
-      <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" class="chat-input" placeholder="Type a question (e.g. Who is Aryan?)" />
-        <button id="sendBtn" class="chat-send">Send</button>
+
+        <div class="hero-right" aria-hidden="true">
+          <div class="preview"><img src="" id="p1"></div>
+          <div class="preview"><img src="" id="p2"></div>
+          <div class="preview"><img src="" id="p3"></div>
+        </div>
       </div>
     </div>
   </div>
 
 <script>
-  // client-side copy of Aryan Q&A (no server storage; messages exist only in the user's page session)
+  // simple typewriter roles
+  const roles = ["Tech Enthusiast","AI Learner","Creative Storyteller","Coffee-Powered Human ☕"];
+  let ridx=0, rpos=0, rforward=true;
+  const roleEl = document.getElementById('typewriter');
+  function typeTick(){
+    const cur = roles[ridx];
+    if (rforward){
+      rpos++;
+      roleEl.textContent = cur.slice(0,rpos);
+      if (rpos === cur.length){ rforward=false; setTimeout(typeTick,1100); return; }
+    } else {
+      rpos--;
+      roleEl.textContent = cur.slice(0,rpos);
+      if (rpos === 0){ rforward=true; ridx=(ridx+1)%roles.length; setTimeout(typeTick,400); return; }
+    }
+    setTimeout(typeTick,60);
+  }
+  typeTick();
+
+  // parallax hero
+  const hero = document.getElementById('parallaxHero');
+  document.addEventListener('mousemove', (e) => {
+    const x = (window.innerWidth / 2 - e.clientX) / 40;
+    const y = (window.innerHeight / 2 - e.clientY) / 40;
+    hero.style.transform = `perspective(900px) rotateY(${x}deg) rotateX(${y}deg)`;
+  });
+
+  // Placeholder images (filled by Streamlit below via JS injection)
+  // Streamlit will replace these through innerHTML injection when component is loaded.
+</script>
+</body>
+</html>
+"""
+
+# Render hero component
+components.html(hero_html, height=760, scrolling=False)
+
+# ---------- Global soft CSS for Streamlit area and premium cards ----------
+st.markdown(
+    """
+    <style>
+    /* match Streamlit background to the soft pastel look */
+    .stApp {
+        background: linear-gradient(180deg, rgba(234,246,255,0.95), rgba(247,240,255,0.96)) !important;
+        color: #111;
+    }
+    /* Glassy card feel for streamlit blocks */
+    .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
+        background: rgba(255,255,255,0.7) !important;
+        border: 1px solid rgba(255,255,255,0.6);
+        box-shadow: 0 12px 30px rgba(12,12,18,0.04);
+        backdrop-filter: blur(8px) !important;
+    }
+    /* headings */
+    .css-10trblm.egzxvld1 { color:#18181b; }
+    .stMarkdown { color:#222; }
+    .stText { color:#222; }
+    a { color: #7b44e5 !important; }
+    /* tidy margins for images area */
+    .gallery-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:18px; align-items:start; }
+    .gallery-item { border-radius:14px; overflow:hidden; box-shadow: 0 10px 30px rgba(16,18,26,0.06); transition: transform .25s ease, box-shadow .25s ease; background: white;}
+    .gallery-item img { width:100%; height:100%; object-fit:cover; display:block; transition: transform .45s ease; }
+    .gallery-item:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(16,18,26,0.09); }
+    .gallery-item:hover img { transform: scale(1.06); }
+    </style>
+    """, unsafe_allow_html=True
+)
+
+# ---------- Gallery: create an HTML masonry-style grid with lightbox (images base64-embedded) ----------
+images = get_gallery_images()
+
+def make_base64(img_path):
+    try:
+        with open(img_path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+            ext = os.path.splitext(img_path)[1].lower().replace('.', '')
+            return f"data:image/{ext};base64,{data}"
+    except Exception as e:
+        return None
+
+if images:
+    # Build HTML gallery
+    gallery_items = []
+    for p in images:
+        b64 = make_base64(p)
+        if not b64:
+            continue
+        # short filename for caption
+        name = os.path.basename(p)
+        item_html = f"""
+        <div class="gallery-item">
+          <img src="{b64}" alt="{name}" loading="lazy" onclick="openLightbox(this.src, '{name}')"/>
+        </div>
+        """
+        gallery_items.append(item_html)
+
+    gallery_html = f"""
+    <div style="padding:18px 6px;">
+      <h2 style="margin:6px 0 14px 6px; color:#2b2b2f;">My Gallery</h2>
+      <div class="gallery-grid">
+        {''.join(gallery_items)}
+      </div>
+    </div>
+
+    <!-- Lightbox modal -->
+    <div id="ps-lightbox" style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; background: rgba(8,10,14,0.6);">
+      <div style="position:relative; max-width:92%; max-height:92%; display:flex; align-items:center; justify-content:center;">
+        <img id="pslb-img" src="" style="max-width:100%; max-height:100%; border-radius:12px; box-shadow: 0 30px 80px rgba(0,0,0,0.6);" />
+        <button onclick="closeLightbox()" style="position:absolute; right:-8px; top:-8px; background:#fff; border-radius:999px; border:none; padding:8px 10px; cursor:pointer; font-weight:700;">✕</button>
+      </div>
+    </div>
+
+    <script>
+      function openLightbox(src, name){
+        const lb = document.getElementById('ps-lightbox');
+        const img = document.getElementById('pslb-img');
+        img.src = src;
+        lb.style.display = 'flex';
+      }
+      function closeLightbox(){
+        const lb = document.getElementById('ps-lightbox');
+        lb.style.display = 'none';
+      }
+      // close on esc
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape') closeLightbox();
+      });
+    </script>
+    """
+
+    st.markdown(gallery_html, unsafe_allow_html=True)
+else:
+    st.info("No gallery images found. Add images to the `gallery/` folder (jpg, png, webp).")
+
+# ---------- Right Column: Blog & Writings (keeps previous functionality) ----------
+st.markdown("---")
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    st.markdown("### 📸 Photos (Gallery)")
+    if not images:
+        st.info("No images found. Add files to the `gallery/` folder.")
+    else:
+        # Show a compact preview strip (small thumbnails)
+        for i, img in enumerate(images):
+            st.image(img, width=200, caption=os.path.basename(img))
+            if i >= 3:
+                break
+        if len(images) > 4:
+            st.caption(f"Plus {len(images)-4} more — click 'My Gallery' to view them all.")
+
+with col2:
+    st.markdown("### ✍️ Writings")
+    posts = get_all_posts()
+    if not posts:
+        st.info("No blog posts found. Add `.md` files to `blog_posts/`.")
+    else:
+        for p in posts:
+            st.subheader(p["title"])
+            st.caption(p.get("date", ""))
+            st.markdown(p["html"], unsafe_allow_html=True)
+            st.markdown("---")
+
+# ---------- Client-side chat (unchanged concept — messages are local to the user's page) ----------
+st.markdown("---")
+st.info("Chat is available via the floating 💬 bubble (bottom-right). The chat runs client-side and does not store messages on the server.")
+
+# Embed a small client-side chat bubble & script (re-using your Q&A)
+chat_js = """
+<div id="ps-chat" style="position:fixed; right:22px; bottom:22px; z-index:9998;">
+  <button id="ps-chat-btn" style="width:62px;height:62px;border-radius:999px;border:none;background:linear-gradient(180deg,#f7e8ff,#eaf6ff);box-shadow:0 12px 30px rgba(16,18,26,0.07);cursor:pointer;font-size:22px;">💬</button>
+  <div id="ps-chat-popup" style="display:none; position:fixed; right:22px; bottom:96px; width:360px; max-width:92vw; z-index:9999;">
+    <div style="background:linear-gradient(180deg, #0b0e12, #0e1114); color:#fff; border-radius:12px; box-shadow:0 30px 80px rgba(7,8,10,0.6); overflow:hidden;">
+      <div style="padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:800; color:#cfefff;">Ask about Aryan ☕</div>
+        <button onclick="psCloseChat()" style="background:transparent;border:none;color:#cfefff; font-weight:700; cursor:pointer;">✕</button>
+      </div>
+      <div id="psChatMessages" style="padding:8px; max-height:260px; overflow:auto; background:linear-gradient(180deg,#08090b,#0b0d10);"></div>
+      <div style="display:flex; gap:8px; padding:10px; background:#071014;">
+        <input id="psChatInput" placeholder="Type a question..." style="flex:1; padding:10px; border-radius:8px; border:none; background:#0f1416; color:#dbefff;" />
+        <button id="psSendBtn" style="padding:10px 12px; border-radius:8px; border:none; background:#7b44e5; color:#fff; font-weight:700; cursor:pointer;">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
   const aryanFacts = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -269,51 +393,45 @@ hero_html = """
     "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
   };
 
-  // UI elements
-  const bubble = document.getElementById('chatBubble');
-  const popup = document.getElementById('chatPopup');
-  const messages = document.getElementById('chatMessages');
-  const input = document.getElementById('chatInput');
-  const sendBtn = document.getElementById('sendBtn');
-  const closeBtn = document.getElementById('closeBtn');
-  const minimizeBtn = document.getElementById('minimizeBtn');
-  const hero = document.getElementById('parallaxHero');
+  const btn = document.getElementById('ps-chat-btn');
+  const popup = document.getElementById('ps-chat-popup');
+  const messagesWrap = document.getElementById('psChatMessages');
+  const input = document.getElementById('psChatInput');
+  const sendBtn = document.getElementById('psSendBtn');
+
+  btn.addEventListener('click', () => {
+    popup.style.display = (popup.style.display === 'flex' || popup.style.display === 'block') ? 'none' : 'block';
+    input.focus();
+    if (!messagesWrap.hasChildNodes()) {
+      addMessage("Hi! Ask me about Aryan ☕", 'bot');
+    }
+  });
 
   function addMessage(text, who='bot'){
     const el = document.createElement('div');
-    el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+    el.style.margin = '6px 0';
+    el.style.padding = '8px 10px';
+    el.style.borderRadius = '9px';
+    el.style.maxWidth = '86%';
+    el.style.clear = 'both';
+    el.style.fontSize = '14px';
+    if (who === 'user'){ el.style.background = 'linear-gradient(90deg,#fff,#fff)'; el.style.color='#061018'; el.style.marginLeft='18%'; } 
+    else { el.style.background = 'linear-gradient(90deg,#0f1720,#0b1114)'; el.style.color='#dff9ff'; el.style.marginRight='18%'; }
     el.textContent = text;
-    messages.appendChild(el);
-    messages.scrollTop = messages.scrollHeight;
+    messagesWrap.appendChild(el);
+    messagesWrap.scrollTop = messagesWrap.scrollHeight;
   }
 
   function replyTo(text){
     const q = text.toLowerCase().trim();
-    // exact matching by presence of key words:
     for (const k in aryanFacts){
-      if (q.includes(k)) {
-        return aryanFacts[k];
-      }
+      if (q.includes(k)) return aryanFacts[k];
     }
-    // fallback simple keyword heuristics
-    if (q.includes('name')) return "Aryan is Aryan Sharma — that guy who turns everyday moments into funny stories.";
+    if (q.includes('name')) return "Aryan is Aryan Sharma — a storyteller who loves coffee and code.";
     if (q.includes('study') || q.includes('studying')) return aryanFacts["what is aryan currently studying"];
     if (q.includes('coffee')) return aryanFacts["what’s aryan’s comfort drink"];
-    if (q.includes('travel')) return aryanFacts["does aryan like travelling"];
-    // default fallback
     return "Ask me anything about Aryan ☕🙂!";
   }
-
-  bubble.addEventListener('click', () => {
-    popup.style.display = 'block';
-    input.focus();
-    if (!messages.hasChildNodes()){
-      addMessage("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
-    }
-  });
-
-  closeBtn.addEventListener('click', () => { popup.style.display = 'none'; });
-  minimizeBtn.addEventListener('click', () => { popup.style.display = 'none'; });
 
   function handleSend(){
     const txt = input.value.trim();
@@ -323,7 +441,7 @@ hero_html = """
     setTimeout(() => {
       const r = replyTo(txt);
       addMessage(r, 'bot');
-    }, 300 + Math.random()*300);
+    }, 350 + Math.random()*300);
   }
 
   sendBtn.addEventListener('click', handleSend);
@@ -331,119 +449,24 @@ hero_html = """
     if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
   });
 
-  // Roles typewriter (hero)
-  const roles = ["Tech Enthusiast","AI Learner","Creative Storyteller","Coffee-Powered Human ☕"];
-  let ridx=0, rpos=0, rfor=true;
-  const roleEl = document.getElementById('role');
-  function tick(){
-    const cur = roles[ridx];
-    if (rfor){
-      rpos++;
-      roleEl.textContent = cur.slice(0,rpos);
-      if (rpos === cur.length){ rfor=false; setTimeout(tick,1100); return; }
-    } else {
-      rpos--;
-      roleEl.textContent = cur.slice(0,rpos);
-      if (rpos === 0){ rfor=true; ridx=(ridx+1)%roles.length; setTimeout(tick,400); return; }
-    }
-    setTimeout(tick,70);
-  }
-  tick();
-
-  // 3D parallax on mouse move (subtle)
-  document.addEventListener("mousemove", (e) => {
-    const x = (window.innerWidth / 2 - e.clientX) / 40;
-    const y = (window.innerHeight / 2 - e.clientY) / 40;
-    hero.style.transform = `perspective(800px) rotateY(${x}deg) rotateX(${y}deg) translateZ(0)`;
-  });
-  document.addEventListener("mouseleave", () => { hero.style.transform = "none"; });
+  function psCloseChat(){ popup.style.display='none'; }
 </script>
-</body>
-</html>
 """
-
-# -------------- Render the hero HTML (components) -------------
-# Components height set to comfortably show hero area
-components.html(hero_html, height=820, scrolling=False)
-
-# ---------- Global CSS override for Streamlit app background to match theme ----------
-# Keeps Streamlit areas readable while matching the hero's visual style.
-st.markdown(
-    """
-    <style>
-    /* Use a matching gradient for the Streamlit app background (transparent feel) */
-    .stApp {
-        background: linear-gradient(135deg, rgba(255,111,181,0.95) 0%, rgba(132,94,247,0.95) 50%, rgba(122,211,255,0.95) 100%) !important;
-        color: #eaf6ff;
-    }
-    /* Make typical Streamlit cards look glassy */
-    .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
-        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
-        border: 1px solid rgba(255,255,255,0.04);
-        box-shadow: 0 10px 40px rgba(6,6,10,0.35);
-    }
-    /* Tweak headings and text colors for contrast */
-    .css-10trblm.egzxvld1 { color: #eaf6ff; } /* headers */
-    .stMarkdown { color: #eaf6ff; }
-    .stText { color: #eaf6ff; }
-    a { color: #cde8ff !important; }
-    </style>
-    """, unsafe_allow_html=True
-)
-
-# ---------- Streamlit content area below (sections auto-load) ----------
-st.markdown("---")
-col1, col2 = st.columns([1, 2])
-
-# Left column: Gallery preview (floating icons in component scroll to these)
-with col1:
-    st.markdown("### 📸 Photos (Gallery)")
-    images = get_gallery_images()
-    if not images:
-        st.info("No images found. Add files to the `gallery/` folder.")
-    else:
-        # small preview grid (show up to 6)
-        for i, img in enumerate(images):
-            st.image(img, use_column_width=True, caption=os.path.basename(img))
-            if i >= 5:
-                break
-        if len(images) > 6:
-            st.caption(f"Plus {len(images)-6} more — they'll appear here automatically.")
-
-# Right column: Blog & Writings sections
-with col2:
-    st.markdown("### ✍️ Writings (Markdown posts)")
-    posts = get_all_posts()
-    if not posts:
-        st.info("No blog posts found. Add `.md` files to `blog_posts/`.")
-    else:
-        for p in posts:
-            st.subheader(p["title"])
-            st.caption(p.get("date", ""))
-            st.markdown(p["html"], unsafe_allow_html=True)
-            st.markdown("---")
-
-# ---------- Short info about chat availability (client-side) ----------
-st.markdown("---")
-st.info("Chat is available via the floating 💬 bubble (bottom-right). The chat runs client-side and does not store messages on the server.")
+components.html(chat_js, height=1, scrolling=False)  # height small; main UI is in page
 
 # ---------- Footer / Projects / Contact placeholders ----------
 st.markdown("---")
 st.markdown("<a id='projects'></a>", unsafe_allow_html=True)
 st.header("Projects")
-st.markdown(
-    """
+st.markdown("""
 - Chatbot Website  
 - Portfolio Builder  
 - AI Experiments  
-(Projects area — add more details to `app.py` or use markdown posts.)
-"""
-)
+(Projects area — add details or use markdown posts.)
+""")
 
 st.markdown("<a id='contact'></a>", unsafe_allow_html=True)
 st.header("Contact")
-st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryanxsharma26)")
+st.write("Prefer DM on Instagram: ", "[aryanxsharma26](https://instagram.com/aryansharmax26)")
 
-# ---------- (Removed Notes & Setup UI section by user request) ----------
-# The "Notes & Setup" section has been intentionally removed from display.
-# If you'd like it back for admins, I can add it behind a secret toggle.
+# ---------- End ----------
