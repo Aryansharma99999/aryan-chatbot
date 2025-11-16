@@ -58,8 +58,31 @@ def get_all_posts():
             posts.append(data)
     return posts
 
-# ---------- Top in-page hero + animation (rendered via components.html) ----------
-# We use components.html so JS animations run reliably.
+# ---------- Chatbot knowledge (Python copy) ----------
+aryan_facts = {
+    "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
+    "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
+    "what makes aryan smile": "Random jokes, good coffee, and accidental life plot twists.",
+    "what’s aryan’s comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
+    "does aryan like travelling": "Yes! Especially when the trip ends with coffee and mountain views.",
+    "how does aryan handle pressure": "With calmness… and maybe two extra cups of coffee.",
+    "what is aryan good at": "Turning simple moments into mini stories and making people laugh randomly.",
+    "what’s aryan’s vibe": "Chill, creative, and always up for a good conversation.",
+    "is aryan an introvert or extrovert": "Somewhere in between—depends on the energy, the weather, and the wifi.",
+    "what motivates aryan": "New ideas, good music, and that one perfect cup of coffee.",
+    "how does aryan face challenges": "With confidence… and sarcasm when required.",
+    "what’s something aryan can’t live without": "Coffee. None 😅. But coffee keeps him warm, so no complaints.",
+    "what makes aryan unique": "His ability to make people laugh even when he’s not trying.",
+    "what’s aryan’s favorite weather": "Cold breeze + warm coffee = perfection.",
+    "how does aryan relax": "Storytelling, music, and wandering thoughts.",
+    "what is aryan passionate about": "Tech, creativity, and turning ideas into reality.",
+    "what is aryan learning right now": "New tech skills… one coffee at a time.",
+    "what type of person is aryan": "Calm, humorous, and secretly a deep thinker.",
+    "what’s aryan’s favourite thing to do": "Observe life and turn it into funny, relatable stories.",
+    "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
+}
+
+# ---------- Full-screen themed hero + popup chat (rendered via components.html) ----------
 hero_html = """
 <!doctype html>
 <html>
@@ -72,183 +95,285 @@ hero_html = """
     --bg1:#ff6fb5; /* pink */
     --bg2:#845ef7; /* purple */
     --bg3:#7ad3ff; /* blue */
+    --glass: rgba(255,255,255,0.04);
   }
-  html,body{height:100%;margin:0;padding:0;font-family:'Poppins',sans-serif;overflow-x:hidden;}
-  body{
-    background: linear-gradient(135deg, rgba(255,111,181,0.95) 0%, rgba(132,94,247,0.95) 50%, rgba(122,211,255,0.95) 100%);
-    min-height:100vh;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+  html,body{height:100%;margin:0;padding:0;font-family:'Poppins',sans-serif;overflow-x:hidden;background:transparent;}
+  /* full page gradient (consistent across app) */
+  .page-bg{
+    position:fixed; inset:0; z-index:0;
+    background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+    filter: saturate(1.05);
   }
-  /* starfield (small dots) */
-  #stars {
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:
-      radial-gradient(#fff 1px, transparent 1px);
-    background-size: 6px 6px;
-    opacity: .18;
+  /* subtle starfield */
+  .stars {
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background-image: radial-gradient(rgba(255,255,255,0.85) 1px, transparent 1px);
+    background-size: 6px 6px; opacity: .12;
     animation: twinkle 6s linear infinite;
   }
   @keyframes twinkle{
-    0%{opacity:.18}
-    50%{opacity:.12}
-    100%{opacity:.18}
+    0%{opacity:.12}
+    50%{opacity:.08}
+    100%{opacity:.12}
   }
 
-  /* hero */
-  .hero-wrap{
-    width:86%;
-    max-width:1100px;
-    margin:30px auto;
-    z-index:2;
-    position:relative;
-    border-radius:24px;
-    padding:64px 64px 80px 64px;
+  /* hero card centered */
+  .page {
+    position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:40px;
     box-sizing:border-box;
-    backdrop-filter: blur(8px) saturate(120%);
-    -webkit-backdrop-filter: blur(8px) saturate(120%);
+  }
+  .hero-wrap{
+    width:86%; max-width:1100px; border-radius:24px; padding:48px; box-sizing:border-box;
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
     background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    box-shadow: 0 20px 50px rgba(10,10,20,0.5), inset 0 1px 0 rgba(255,255,255,0.03);
+    box-shadow: 0 20px 50px rgba(10,10,20,0.45), inset 0 1px 0 rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.04);
-    overflow:hidden;
-  }
-
-  .neon-outline{
-    position:absolute; inset:10px; border-radius:20px;
-    pointer-events:none;
-    box-shadow: 0 0 0 2px rgba(130,90,240,0.12), 0 0 30px rgba(130,90,240,0.08) inset;
-    border: 3px solid rgba(130,90,240,0.12);
-  }
-
-  .hero-title{
-    margin:0; font-size:48px; font-weight:800;
     text-align:center;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
   }
-  .hero-sub{
-    text-align:center; color: #e6f0ff; font-size:18px; opacity:.95; margin-top:10px;
+  .hero-title{ margin:0; font-size:48px; font-weight:800;
+    background:linear-gradient(90deg,var(--bg1),var(--bg2)); -webkit-background-clip:text; color:transparent;
   }
-  .typewrap{ text-align:center; margin-top:14px; color:#cde8ff; font-weight:600;}
+  .hero-sub{ margin-top:10px; color:#e6f7ff; font-size:18px; opacity:.95; }
+  .typewrap{ text-align:center; margin-top:14px; color:#cde8ff; font-weight:600; }
   .roles { color:#ffd3f0; font-weight:700; font-size:18px; height:26px; display:inline-block; margin-left:6px; }
 
-  /* Buttons row */
-  .cta-row{ display:flex; gap:14px; justify-content:center; margin-top:28px; }
+  .cta-row{ display:flex; gap:14px; justify-content:center; margin-top:22px; }
   .btn {
-    padding:12px 20px; border-radius:999px; border:none; cursor:pointer;
-    font-weight:700; font-size:15px;
-    background:linear-gradient(90deg,var(--bg1),var(--bg2));
-    color:#041622; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+    padding:12px 20px; border-radius:999px; border:none; cursor:pointer; font-weight:700; font-size:15px;
+    background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; box-shadow: 0 6px 18px rgba(0,0,0,0.25);
   }
   .btn-outline {
     padding:12px 20px; border-radius:999px; border:1px solid rgba(255,255,255,0.08);
     background:transparent; color:#d7d7ff; font-weight:700;
   }
 
-  /* floating icons - bottom left vertical */
-  .float-left {
-    position:fixed; left:18px; bottom:26%;
-    display:flex; flex-direction:column; gap:18px; z-index:6;
+  /* floating bubble (bottom-right) */
+  .chat-bubble {
+    position:fixed; right:26px; bottom:26px; z-index:6;
+    width:64px; height:64px; border-radius:999px; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,var(--bg2),var(--bg1));
+    box-shadow: 0 12px 40px rgba(10,10,20,0.45);
+    color:white; font-size:26px; cursor:pointer; transition: transform .18s ease;
   }
-  .float-btn {
-    width:56px; height:56px; border-radius:999px; display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-    border:2px solid rgba(255,255,255,0.06);
-    box-shadow: 0 8px 30px rgba(12,10,20,0.5);
-    cursor:pointer;
-    transition: transform .18s ease, box-shadow .18s ease;
-    color:#fff; font-size:22px;
-  }
-  .float-btn:hover{ transform: translateY(-6px); box-shadow: 0 18px 40px rgba(10,10,20,0.6); }
+  .chat-bubble:hover{ transform: translateY(-6px); }
 
-  /* chatbot floating bottom right (static look) */
-  .chat-float {
-    position:fixed; right:26px; bottom:26px; z-index:7;
-    background:linear-gradient(180deg, rgba(14,16,20,0.95), rgba(26,28,32,0.92));
-    width:380px; max-width:92vw; border-radius:14px; padding:18px;
-    box-shadow: 0 20px 60px rgba(10,10,20,0.6);
+  /* popup chat window */
+  .chat-popup {
+    position:fixed; right:26px; bottom:100px; z-index:7; width:380px; max-width:92vw;
+    border-radius:14px; overflow:hidden; box-shadow: 0 30px 80px rgba(10,10,20,0.6);
+    display:none; /* toggled by JS */
+    transform-origin: bottom right;
+  }
+  .chat-card {
+    background: linear-gradient(180deg, rgba(8,10,14,0.98), rgba(12,14,18,0.95));
     color:#fff;
+    padding:12px; box-sizing:border-box;
   }
-  .chat-title{ color:#5fe4ff; font-weight:800; margin-bottom:8px; }
-  .chat-input{ width:100%; padding:10px 12px; border-radius:8px; border:none; background:#111216; color:#ddd; }
+  .chat-header{ display:flex; justify-content:space-between; align-items:center; padding:6px 8px; }
+  .chat-title { color:#6ef0ff; font-weight:800; font-size:15px; }
+  .chat-close { background:transparent; border:none; color:#b9dff7; font-size:18px; cursor:pointer; }
+  .chat-messages { max-height:320px; overflow:auto; padding:8px; margin-top:8px; }
+  .msg { margin:8px 0; padding:10px 12px; border-radius:12px; display:inline-block; clear:both; max-width:85%; }
+  .msg.user { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); float:right; color:#fff; }
+  .msg.bot { background: linear-gradient(90deg, rgba(120,120,255,0.06), rgba(120,120,255,0.02)); float:left; color:#fff; }
+  .chat-input-row { display:flex; gap:8px; margin-top:10px; }
+  .chat-input { flex:1; padding:10px; border-radius:10px; border:none; background:#0f1113; color:#e6eef8; }
+  .chat-send { padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(90deg,var(--bg1),var(--bg2)); color:#041622; cursor:pointer; font-weight:700; }
 
-  /* responsive */
   @media (max-width:800px){
-    .hero-wrap{ padding:36px 22px; width:92%;}
-    .hero-title{ font-size:32px;}
-    .float-left{ left:10px; bottom:18%;}
-    .chat-float{ width:320px; right:12px; bottom:12px;}
+    .hero-title{ font-size:32px; }
+    .chat-popup { right:12px; left:12px; bottom:90px; width:calc(100% - 24px); }
+    .chat-bubble { right:12px; bottom:12px; }
   }
 </style>
 </head>
 <body>
-  <div id="stars"></div>
+  <div class="page-bg"></div>
+  <div class="stars"></div>
 
-  <div class="hero-wrap" id="hero">
-    <div class="neon-outline"></div>
-    <h1 class="hero-title">Aryan Sharma</h1>
-    <div class="hero-sub">Welcome to my personal website! <span id="blink">|</span></div>
-
-    <div class="typewrap">I'm a <span class="roles" id="role"></span></div>
-
-    <div class="cta-row">
-      <button class="btn" onclick="location.href='#projects'">Download Resume</button>
-      <button class="btn-outline" onclick="location.href='#contact'">Get In Touch</button>
+  <div class="page">
+    <div class="hero-wrap" role="main" aria-label="hero">
+      <h1 class="hero-title">Aryan Sharma</h1>
+      <div class="hero-sub">Welcome to my personal website! <span id="blink">|</span></div>
+      <div class="typewrap">I'm a <span class="roles" id="role">tech enthusiast</span></div>
+      <div class="cta-row">
+        <button class="btn" onclick="location.href='#projects'">Download Resume</button>
+        <button class="btn-outline" onclick="location.href='#contact'">Get In Touch</button>
+      </div>
     </div>
   </div>
 
-  <!-- floating icons left -->
-  <div class="float-left" aria-hidden="true">
-    <div class="float-btn" title="Gallery" onclick="document.getElementById('gallery-section').scrollIntoView({behavior:'smooth'})">📷</div>
-    <div class="float-btn" title="Anonymous" onclick="document.getElementById('writings-section').scrollIntoView({behavior:'smooth'})">📝</div>
-    <div class="float-btn" title="Writings" onclick="document.getElementById('blog-section').scrollIntoView({behavior:'smooth'})">✍️</div>
+  <!-- floating chat bubble -->
+  <div class="chat-bubble" id="chatBubble" title="Ask me about Aryan">💬</div>
+
+  <!-- popup chat -->
+  <div class="chat-popup" id="chatPopup" role="dialog" aria-modal="true" aria-label="Aryan chatbot popup">
+    <div class="chat-card">
+      <div class="chat-header">
+        <div class="chat-title">Ask me about Aryan ☕</div>
+        <div>
+          <button class="chat-close" id="minimizeBtn" title="Minimize">—</button>
+          <button class="chat-close" id="closeBtn" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages" aria-live="polite"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="chat-input" placeholder="Type a question (e.g. Who is Aryan?)" />
+        <button id="sendBtn" class="chat-send">Send</button>
+      </div>
+    </div>
   </div>
 
-  <!-- small JS: particles (tiny stars) and typewriter cycle -->
-  <script>
-    // Typewriter-like cycle (erase + replace)
-    const roles = ["web developer","learner","tech enthusiast","programmer","writer","video editor"];
-    let idx = 0, pos = 0, forward = true;
-    const roleEl = document.getElementById('role');
-    const blink = document.getElementById('blink');
-    function tick() {
-      const current = roles[idx];
-      if (forward) {
-        pos++;
-        roleEl.textContent = current.slice(0,pos);
-        if (pos === current.length) { forward = false; setTimeout(tick, 900); return; }
-      } else {
-        pos--;
-        roleEl.textContent = current.slice(0,pos);
-        if (pos === 0) { forward = true; idx = (idx+1)%roles.length; setTimeout(tick, 400); return; }
+<script>
+  // client-side copy of Aryan Q&A
+  const aryanFacts = {
+    "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
+    "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
+    "what makes aryan smile": "Random jokes, good coffee, and accidental life plot twists.",
+    "what’s aryan’s comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
+    "does aryan like travelling": "Yes! Especially when the trip ends with coffee and mountain views.",
+    "how does aryan handle pressure": "With calmness… and maybe two extra cups of coffee.",
+    "what is aryan good at": "Turning simple moments into mini stories and making people laugh randomly.",
+    "what’s aryan’s vibe": "Chill, creative, and always up for a good conversation.",
+    "is aryan an introvert or extrovert": "Somewhere in between—depends on the energy, the weather, and the wifi.",
+    "what motivates aryan": "New ideas, good music, and that one perfect cup of coffee.",
+    "how does aryan face challenges": "With confidence… and sarcasm when required.",
+    "what’s something aryan can’t live without": "Coffee. None 😅. But coffee keeps him warm, so no complaints.",
+    "what makes aryan unique": "His ability to make people laugh even when he’s not trying.",
+    "what’s aryan’s favorite weather": "Cold breeze + warm coffee = perfection.",
+    "how does aryan relax": "Storytelling, music, and wandering thoughts.",
+    "what is aryan passionate about": "Tech, creativity, and turning ideas into reality.",
+    "what is aryan learning right now": "New tech skills… one coffee at a time.",
+    "what type of person is aryan": "Calm, humorous, and secretly a deep thinker.",
+    "what’s aryan’s favourite thing to do": "Observe life and turn it into funny, relatable stories.",
+    "what does aryan dream about": "A life full of learning, creativity, and a never-ending coffee supply."
+  };
+
+  // UI elements
+  const bubble = document.getElementById('chatBubble');
+  const popup = document.getElementById('chatPopup');
+  const messages = document.getElementById('chatMessages');
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const closeBtn = document.getElementById('closeBtn');
+  const minimizeBtn = document.getElementById('minimizeBtn');
+
+  function addMessage(text, who='bot'){
+    const el = document.createElement('div');
+    el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+    el.textContent = text;
+    messages.appendChild(el);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function replyTo(text){
+    const q = text.toLowerCase().trim();
+    // exact matching by presence of key words:
+    for (const k in aryanFacts){
+      if (q.includes(k)) {
+        return aryanFacts[k];
       }
-      setTimeout(tick, 70);
     }
-    tick();
-    // blink cursor
-    setInterval(()=>{ blink.style.visibility = (blink.style.visibility==='hidden'?'visible':'hidden') },600);
+    // fallback attempts: check for keywords
+    if (q.includes('name')) return "Aryan is Aryan Sharma — that guy who turns everyday moments into funny stories.";
+    if (q.includes('study') || q.includes('studying')) return aryanFacts["what is aryan currently studying"];
+    if (q.includes('coffee')) return aryanFacts["what’s aryan’s comfort drink"];
+    if (q.includes('travel')) return aryanFacts["does aryan like travelling"];
+    // default
+    return "Ask me anything about Aryan ☕🙂!";
+  }
 
-    // Simple particle effect (CSS background handles tiny dots and twinkle)
-    // For little extra drifting, we'll animate via JS small translate on the hero overlay (subtle)
-    const hero = document.querySelector('.hero-wrap');
-    let t=0;
-    function floatHero(){
-      t+=0.002;
-      const dx = Math.sin(t*1.2)*6;
-      const dy = Math.cos(t)*6;
-      hero.style.transform = `translate(${dx}px, ${dy}px)`;
-      requestAnimationFrame(floatHero);
+  bubble.addEventListener('click', () => {
+    popup.style.display = 'block';
+    popup.style.transform = 'scale(1)';
+    input.focus();
+    // initial greeting if empty
+    if (!messages.hasChildNodes()){
+      addMessage("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
     }
-    floatHero();
-  </script>
+  });
 
+  closeBtn.addEventListener('click', () => {
+    popup.style.display = 'none';
+  });
+  minimizeBtn.addEventListener('click', () => {
+    // minimize = hide but keep bubble visible
+    popup.style.display = 'none';
+  });
+
+  function handleSend(){
+    const txt = input.value.trim();
+    if (!txt) return;
+    addMessage(txt, 'user');
+    input.value = '';
+    // tiny "thinking" delay for UX
+    setTimeout(() => {
+      const r = replyTo(txt);
+      addMessage(r, 'bot');
+    }, 300 + Math.random()*400);
+  }
+
+  sendBtn.addEventListener('click', handleSend);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleSend(); }
+  });
+
+  // small typewriter for role
+  const roles = ["web developer","learner","tech enthusiast","programmer","writer","video editor"];
+  let ridx=0, rpos=0, rfor=true;
+  const roleEl = document.getElementById('role');
+  const blink = document.getElementById('blink');
+  function tick(){
+    const cur = roles[ridx];
+    if (rfor){
+      rpos++;
+      roleEl.textContent = cur.slice(0,rpos);
+      if (rpos === cur.length){ rfor=false; setTimeout(tick,900); return; }
+    } else {
+      rpos--;
+      roleEl.textContent = cur.slice(0,rpos);
+      if (rpos === 0){ rfor=true; ridx=(ridx+1)%roles.length; setTimeout(tick,400); return; }
+    }
+    setTimeout(tick,70);
+  }
+  tick();
+  setInterval(()=>{ blink.style.visibility = (blink.style.visibility==='hidden'?'visible':'hidden') },600);
+</script>
 </body>
 </html>
 """
 
 # -------------- Render the hero HTML (components) -------------
-components.html(hero_html, height=520, scrolling=False)
+# Use a tall height so the component fills the top area comfortably.
+components.html(hero_html, height=740, scrolling=False)
+
+# ---------- Global CSS override for Streamlit app background to match theme ----------
+# This makes the rest of the Streamlit page use the same gradient (glass cards remain readable).
+st.markdown(
+    """
+    <style>
+    /* Force Streamlit body background to be transparent so our component gradient shows through */
+    .stApp {
+        background: linear-gradient(135deg, rgba(255,111,181,0.95) 0%, rgba(132,94,247,0.95) 50%, rgba(122,211,255,0.95) 100%) !important;
+        color: #eaf6ff;
+    }
+    /* Make Streamlit default white cards look glassy */
+    .stBlock, .css-1lcbmhc.e1fqkh3o3, .st-b1 {
+        background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)) !important;
+        border: 1px solid rgba(255,255,255,0.04);
+        box-shadow: 0 10px 40px rgba(6,6,10,0.35);
+    }
+    /* Tweak headings and text colors for contrast */
+    .css-10trblm.egzxvld1 { color: #eaf6ff; } /* headers */
+    .stMarkdown { color: #eaf6ff; }
+    .stText { color: #eaf6ff; }
+    /* links */
+    a { color: #cde8ff !important; }
+    </style>
+    """, unsafe_allow_html=True
+)
 
 # ---------- Streamlit content area below (sections auto-load) ----------
 st.markdown("---")
@@ -296,33 +421,9 @@ with col2:
             st.markdown(p["html"], unsafe_allow_html=True)
             st.markdown("---")
 
-# ---------- Chatbot (simple front-end demo) ----------
-st.markdown("<div id='chatbox_placeholder'></div>", unsafe_allow_html=True)
-# Simple chat UI in the Streamlit area (works with session state)
-if 'messages' not in st.session_state:
-    st.session_state.messages = [{"role":"system", "text":"Hi! Ask me about Aryan."}]
-st.markdown("## 💬 Chat with Aryan's assistant (demo)")
-for m in st.session_state.messages:
-    if m["role"] == "system":
-        st.markdown(f"**Assistant:** {m['text']}")
-    else:
-        st.markdown(f"**You:** {m['text']}")
-
-user_q = st.text_input("Type your question...")
-if st.button("Send"):
-    if user_q.strip():
-        st.session_state.messages.append({"role":"user","text":user_q})
-        # A tiny rule-based demo reply:
-        q = user_q.lower()
-        reply = "Sorry, I don't have an answer for that yet."
-        if "name" in q:
-            reply = "My name is Aryan."
-        elif "where" in q:
-            reply = "I'm from India."
-        elif "contact" in q or "email" in q:
-            reply = "You can reach me on Instagram: @aryanxsharma26"
-        st.session_state.messages.append({"role":"system","text":reply})
-        st.experimental_rerun()
+# ---------- NOTE: Chat is now provided via the floating popup bubble in the hero component ----------
+st.markdown("---")
+st.info("Chat is available via the floating 💬 bubble (bottom-right) — click it to Ask me about Aryan.")
 
 # ---------- Footer / Projects / Contact placeholders ----------
 st.markdown("---")
@@ -345,7 +446,6 @@ st.markdown("### ⚙️ Notes & Setup")
 st.markdown("""
 - Put image files inside `gallery/` (jpg, png, webp). They will auto-appear in the Photos section.
 - Put markdown files (`.md`) inside `blog_posts/` — these will be parsed and displayed under Blog Posts.
-- This is a demo front-end; you can wire the chat to a backend or Telegram bot by updating the chat send handler.
+- The chat widget is client-side (JS) and uses the 20 Q&A answers you provided. If you'd like the bot to call a Python backend or an API (for dynamic replies), I can wire that up next.
 - To change colors/feel, edit the CSS in the `hero_html` string at the top.
 """)
-
