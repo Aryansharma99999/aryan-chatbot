@@ -67,136 +67,121 @@ def get_all_posts():
     return posts
 
 
-# ---------------- Premium Galaxy hero + dynamic chatbot ----------------
-hero_html = """
+# ---------------- HTML component: full-screen galaxy + hero + chat ----------------
+# We request a tall height for the component so iframe fills the viewport; we also aggressively force iframe height using CSS below.
+hero_html = r"""
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-
 <style>
 :root{
-  --text: #eaf6ff;
-  --glass: rgba(255,255,255,0.04);
+  --text:#eaf6ff;
+  --glass: rgba(255,255,255,0.03);
 }
 
-/* full galaxy canvas */
-html, body{ margin:0; padding:0; height:100%; overflow:hidden; font-family:Inter, system-ui; color:var(--text); }
-#galaxy-wrap { position:fixed; inset:0; z-index:0; pointer-events:none; }
+/* ensure the component covers viewport inside iframe */
+html,body{height:100%;margin:0;padding:0;overflow:hidden;font-family:Inter,system-ui;color:var(--text);}
 
-/* hero container */
-.page{ position:relative; z-index:6; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px; }
+/* canvas covers full area of component */
+#galaxy-wrap{position:fixed;inset:0;z-index:0;pointer-events:none;}
+canvas{width:100%;height:100%;display:block;}
 
-/* glass hero card */
-.hero-card {
-  width:90%; max-width:1100px;
-  padding:46px; border-radius:18px;
+/* page container holds hero centered vertically */
+.page{position:relative; z-index:6; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:36px; box-sizing:border-box;}
+
+/* hero glass card */
+.hero-card{
+  width:85%; max-width:1100px; border-radius:18px;
+  padding:44px; box-sizing:border-box;
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
-  background: rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.045);
-  box-shadow:0 40px 110px rgba(2,6,20,0.55);
-  text-align:center;
-  transform: translateY(20px); opacity:0;
-  transition:all .8s cubic-bezier(.2,.9,.3,1);
-}
-.hero-card.show { transform:translateY(0); opacity:1; }
-
-.hero-title { font-size:48px; font-weight:800; margin:0; color: #f1f8ff; }
-.hero-sub { margin-top:8px; font-size:18px; opacity:.92; color: rgba(230,240,255,0.9); }
-.roles { font-weight:700; color:#d2e6ff; }
-
-.cta { margin-top:24px; display:flex; justify-content:center; gap:12px; }
-.btn {
-  padding:10px 18px; border-radius:999px; font-weight:700; cursor:pointer;
-  transition:transform .18s ease;
-  border:none;
-}
-.btn:hover{ transform:translateY(-4px); }
-.btn-primary {
-  background:#8db3ff; color:#07182a;
-}
-.btn-ghost {
-  background:transparent; color:#eaf6ff; border:1px solid rgba(255,255,255,0.06);
-}
-
-/* Chat orb */
-.chat-orb{
-  position:fixed; right:26px; bottom:28px; width:62px; height:62px;
-  border-radius:999px; z-index:20;
-  background:rgba(10,12,18,0.92);
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 24px 70px rgba(0,0,0,0.6);
-  cursor:pointer; transition:transform .18s ease;
-}
-.chat-orb:hover{ transform:translateY(-5px); }
-
-/* Dynamic island chat */
-.island{
-  position:fixed; right:26px; bottom:110px; width:380px; max-width:92vw;
-  border-radius:14px; overflow:hidden; background:rgba(6,10,14,0.92);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border:1px solid rgba(255,255,255,0.04);
-  box-shadow:0 30px 100px rgba(0,0,0,0.65);
-  display:none; z-index:30;
-  animation:islandIn .25s ease;
+  box-shadow: 0 40px 110px rgba(2,6,20,0.6);
+  text-align:center;
+  transform: translateY(18px); opacity:0;
+  transition: all .8s cubic-bezier(.2,.9,.3,1);
 }
-@keyframes islandIn{
-  from{transform:translateY(8px) scale(.98); opacity:0;}
-  to{transform:translateY(0) scale(1); opacity:1;}
+.hero-card.show { transform: translateY(0); opacity:1; }
+
+.hero-title{ font-size:46px; font-weight:800; margin:0; color:#f3f9ff; }
+.hero-sub{ margin-top:10px; font-size:18px; color:rgba(230,240,255,0.9); }
+.roles{ margin-top:10px; font-weight:700; color:#d3e9ff; }
+
+.cta{ margin-top:22px; display:flex; gap:12px; justify-content:center; align-items:center; }
+.btn{ padding:10px 18px; border-radius:999px; font-weight:700; cursor:pointer; border:none; transition: transform .18s ease; }
+.btn:hover{ transform: translateY(-4px); }
+.btn-primary{ background: #8db3ff; color:#07182a; }
+.btn-ghost{ background:transparent; color:#dfefff; border:1px solid rgba(255,255,255,0.06); }
+
+/* floating chat orb */
+.chat-orb{
+  position:fixed; right:26px; bottom:28px; width:64px; height:64px; z-index:40;
+  border-radius:999px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(180deg, rgba(18,20,24,0.96), rgba(12,14,18,0.96));
+  box-shadow:0 28px 80px rgba(0,0,0,0.6); cursor:pointer; border:1px solid rgba(255,255,255,0.03);
 }
+.chat-orb:hover{ transform: translateY(-6px); }
 
-.island-header{ padding:12px; font-weight:700; background:rgba(255,255,255,0.04); color:#cdeeff; }
-.island-body{ padding:12px; max-height:300px; overflow:auto; }
-.msg{ padding:10px 14px; margin:8px 0; border-radius:12px; max-width:80%; color:#eef7ff; }
-.msg.user{ background:rgba(255,255,255,0.08); margin-left:auto; color:#081827; }
-.msg.bot{ background:rgba(120,160,255,0.08); }
+/* dynamic island chat modal (close to orb) */
+.island{
+  position:fixed; right:26px; bottom:106px; width:420px; max-width:92vw; z-index:45;
+  border-radius:14px; overflow:hidden; display:none;
+  background: linear-gradient(180deg, rgba(8,10,14,0.96), rgba(12,14,18,0.96));
+  border:1px solid rgba(255,255,255,0.04);
+  box-shadow:0 30px 100px rgba(0,0,0,0.7);
+}
+.island.show{ display:block; animation:islandIn .22s cubic-bezier(.2,.9,.3,1); }
+@keyframes islandIn{ from{ transform: translateY(8px) scale(.98); opacity:0 } to { transform:none; opacity:1 } }
 
-/* input */
-.island-footer{ padding:12px; display:flex; gap:8px; }
-.chat-input{ flex:1; padding:10px; border-radius:10px; border:none; background:#0d1014; color:#eaf6ff; outline:none; }
+.island .header{ padding:12px 14px; font-weight:700; color:#cfeeff; background:rgba(255,255,255,0.02); }
+.island .body{ padding:12px; max-height:320px; overflow:auto; }
+.msg{ margin:8px 0; padding:10px 12px; border-radius:12px; max-width:82%; color:#eef9ff; }
+.msg.user{ background: rgba(255,255,255,0.08); color:#071827; margin-left:auto; }
+.msg.bot{ background: rgba(110,140,200,0.08); }
 
-/* small mobile tweaks */
-@media (max-width:760px){
-  .hero-title { font-size:32px; }
-  .island{ left:12px; right:12px; width:calc(100% - 24px); bottom:80px; }
+/* island footer */
+.island .footer{ padding:12px; display:flex; gap:8px; }
+.chat-input{ flex:1; padding:10px 12px; border-radius:10px; border:none; background:#0f1316; color:#eaf6ff; }
+
+/* small responsive */
+@media (max-width:780px){
+  .hero-title{ font-size:32px; }
+  .island{ left:12px; right:12px; width:calc(100% - 24px); bottom:84px; }
 }
 </style>
 </head>
-
 <body>
+  <div id="galaxy-wrap"><canvas id="galaxy"></canvas></div>
 
-<div id="galaxy-wrap">
-  <canvas id="galaxy"></canvas>
-</div>
-
-<div class="page">
-  <div class="hero-card" id="heroCard" role="banner" aria-label="Hero">
-    <h1 class="hero-title">Aryan Sharma</h1>
-    <div class="hero-sub">Welcome to my personal website!</div>
-    <div style="margin-top:10px;">I'm a <span class="roles" id="role">developer</span></div>
-
-    <div class="cta">
-      <a href="/resume.pdf#chatbot-section" class="btn btn-primary">Download Resume</a>
-      <button class="btn btn-ghost" onclick="document.getElementById('projects_anchor').scrollIntoView({behavior:'smooth'})">Get In Touch</button>
+  <div class="page" role="main">
+    <div class="hero-card" id="heroCard" aria-label="Hero">
+      <h1 class="hero-title">Aryan Sharma</h1>
+      <div class="hero-sub">Welcome to my personal website!</div>
+      <div class="roles" id="role">tech enthusiast</div>
+      <div class="cta">
+        <a href="/resume.pdf#chatbot-section" class="btn btn-primary" role="button">Download Resume</a>
+        <button class="btn btn-ghost" onclick="document.getElementById('projects_anchor').scrollIntoView({behavior:'smooth'})">Get In Touch</button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="chat-orb" id="chatOrb" aria-label="Open chat">💬</div>
+  <div class="chat-orb" id="chatOrb" aria-label="Ask me about Aryan">💬</div>
 
-<div class="island" id="island" role="dialog" aria-modal="true" aria-label="Chat with Aryan">
-  <div class="island-header">Ask me about Aryan ☕</div>
-  <div class="island-body" id="chatBody" aria-live="polite"></div>
-  <div class="island-footer">
-    <input id="chatInput" class="chat-input" placeholder="Ask something...">
-    <button id="chatSend" class="btn btn-primary">Send</button>
+  <div class="island" id="island" role="dialog" aria-modal="true" aria-label="Chat with Aryan">
+    <div class="header">Ask me about Aryan ☕</div>
+    <div class="body" id="chatBody" aria-live="polite"></div>
+    <div class="footer">
+      <input id="chatInput" class="chat-input" placeholder="Type a question (e.g. Who is Aryan?)" />
+      <button id="chatSend" class="btn btn-primary">Send</button>
+    </div>
   </div>
-</div>
 
 <script>
-/* ---------------- STARFIELD CANVAS (optimized, multi-layer look) ---------------- */
+/* ========== Canvas Galaxy: multi-layer + subtle nebula ========== */
 (function(){
   const canvas = document.getElementById('galaxy');
   const ctx = canvas.getContext('2d');
@@ -208,49 +193,46 @@ html, body{ margin:0; padding:0; height:100%; overflow:hidden; font-family:Inter
   resize();
   window.addEventListener('resize', resize);
 
-  // create multi-layer star sets for depth
   const layers = [
-    {count: 90, speed: 0.2, size: [0.3, 1.0], alpha: 0.5},
-    {count: 50, speed: 0.6, size: [1.2, 2.2], alpha: 0.85},
-    {count: 25, speed: 1.2, size: [2.8, 4.0], alpha: 0.95}
+    {count:120, speed:0.18, size:[0.3,1.0], alpha:0.6},
+    {count:60, speed:0.45, size:[1.2,2.2], alpha:0.9},
+    {count:30, speed:1.0, size:[2.6,4.0], alpha:1.0}
   ];
-  let starGroups = [];
-  function makeStars(){
-    starGroups = [];
+  let groups = [];
+  function make(){
+    groups = [];
     for(const L of layers){
-      const arr = [];
+      const arr=[];
       for(let i=0;i<L.count;i++){
         arr.push({
           x: Math.random()*canvas.width,
           y: Math.random()*canvas.height,
-          r: Math.random()*(L.size[1]-L.size[0]) + L.size[0],
+          r: Math.random()*(L.size[1]-L.size[0])+L.size[0],
           vx: (Math.random()*2-1)*L.speed*0.3,
           vy: (Math.random()*2-1)*L.speed*0.3,
           a: L.alpha*(0.6 + Math.random()*0.4)
         });
       }
-      starGroups.push(arr);
+      groups.push(arr);
     }
   }
-  makeStars();
+  make();
 
-  let t = 0, mx = canvas.width/2, my = canvas.height/2;
+  let t=0, mx = canvas.width/2, my = canvas.height/2;
   window.addEventListener('mousemove', (e)=>{ mx = e.clientX; my = e.clientY; });
 
   function drawNebula(){
-    // dark gradient base
     const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
-    g.addColorStop(0, 'rgba(8,10,18,0.95)');
-    g.addColorStop(1, 'rgba(12,14,28,0.95)');
+    g.addColorStop(0,'rgba(6,10,18,0.96)');
+    g.addColorStop(1,'rgba(12,14,28,0.96)');
     ctx.fillStyle = g;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // soft nebula radial glows
-    const cx = canvas.width*0.65 + Math.sin(t*0.2)*120;
+    const cx = canvas.width*0.68 + Math.sin(t*0.2)*120;
     const cy = canvas.height*0.28 + Math.cos(t*0.15)*80;
     const rg = ctx.createRadialGradient(cx,cy,0,cx,cy, Math.max(canvas.width,canvas.height)*0.9);
     rg.addColorStop(0, 'rgba(60,40,120,0.14)');
-    rg.addColorStop(0.25, 'rgba(80,60,160,0.08)');
+    rg.addColorStop(0.3, 'rgba(80,60,160,0.08)');
     rg.addColorStop(0.6, 'rgba(6,10,20,0.02)');
     ctx.globalCompositeOperation = 'lighter';
     ctx.fillStyle = rg;
@@ -259,21 +241,19 @@ html, body{ margin:0; padding:0; height:100%; overflow:hidden; font-family:Inter
   }
 
   function drawStars(){
-    for(let gi=0; gi<starGroups.length; gi++){
-      const group = starGroups[gi];
+    for(let gi=0; gi<groups.length; gi++){
+      const group = groups[gi];
       for(const s of group){
-        // parallax based on mouse
-        const px = (mx - canvas.width/2) * (0.0006 + gi*0.001);
-        const py = (my - canvas.height/2) * (0.0006 + gi*0.001);
-        s.x += s.vx;
-        s.y += s.vy;
-        if(s.x < -10) s.x = canvas.width + 10;
-        if(s.x > canvas.width + 10) s.x = -10;
-        if(s.y < -10) s.y = canvas.height + 10;
-        if(s.y > canvas.height + 10) s.y = -10;
+        const px = (mx - canvas.width/2) * (0.0005 + gi*0.001);
+        const py = (my - canvas.height/2) * (0.0005 + gi*0.001);
+        s.x += s.vx; s.y += s.vy;
+        if(s.x < -10) s.x = canvas.width+10;
+        if(s.x > canvas.width+10) s.x = -10;
+        if(s.y < -10) s.y = canvas.height+10;
+        if(s.y > canvas.height+10) s.y = -10;
 
         ctx.beginPath();
-        ctx.fillStyle = 'rgba(255,255,255,' + (s.a * (0.6 + Math.sin((t + s.x + s.y)/90)*0.35)) + ')';
+        ctx.fillStyle = 'rgba(255,255,255,' + (s.a * (0.6 + Math.sin((t+s.x+s.y)/90)*0.35)) + ')';
         ctx.arc(s.x + px*40, s.y + py*40, s.r, 0, Math.PI*2);
         ctx.fill();
       }
@@ -281,7 +261,7 @@ html, body{ margin:0; padding:0; height:100%; overflow:hidden; font-family:Inter
   }
 
   function loop(){
-    t += 0.018;
+    t += 0.016;
     drawNebula();
     drawStars();
     requestAnimationFrame(loop);
@@ -289,11 +269,11 @@ html, body{ margin:0; padding:0; height:100%; overflow:hidden; font-family:Inter
   loop();
 })();
 
-/* ---------------- HERO SHOW + TYPEWRITER ---------------- */
+/* ===== hero show + typewriter ===== */
 window.addEventListener('DOMContentLoaded', function(){
   setTimeout(()=>document.getElementById('heroCard').classList.add('show'), 120);
   const roles = ["web developer","tech enthusiast","programmer","writer","editor"];
-  let idx=0,pos=0,fw=true; const el = document.getElementById('role');
+  let idx=0,pos=0,fw=true; const el=document.getElementById('role');
   (function tick(){
     const cur = roles[idx];
     if(fw){ pos++; el.textContent = cur.slice(0,pos); if(pos===cur.length){ fw=false; setTimeout(tick,800); return; } }
@@ -302,7 +282,7 @@ window.addEventListener('DOMContentLoaded', function(){
   })();
 });
 
-/* ---------------- ARYAN_FACTS (client-side JS) ---------------- */
+/* ===== Chatbot facts (client-side) ===== */
 const ARYAN_FACTS = {
   "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
   "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -326,7 +306,7 @@ const ARYAN_FACTS = {
   "what does aryan dream about": "A life full of learning, creativity, and endless coffee."
 };
 
-/* ---------------- CHAT SCRIPT ---------------- */
+/* ===== Chat logic ===== */
 (function(){
   const orb = document.getElementById('chatOrb');
   const island = document.getElementById('island');
@@ -336,93 +316,99 @@ const ARYAN_FACTS = {
 
   function addMsg(t, who){
     const el = document.createElement('div');
-    el.className = 'msg ' + (who==='user'? 'user' : 'bot');
+    el.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
     el.textContent = t;
     body.appendChild(el);
     body.scrollTop = body.scrollHeight;
   }
 
-  orb.addEventListener('click', ()=>{
-    island.style.display = island.style.display === 'block' ? 'none' : 'block';
+  orb.addEventListener('click', () => {
+    island.classList.toggle('show');
     input.focus();
     if(body.children.length === 0) addMsg("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
   });
 
-  send.addEventListener('click', ()=>{
-    const q = input.value.trim();
+  send.addEventListener('click', () =>{
+    const q = (input.value||'').trim();
     if(!q) return;
     addMsg(q, 'user');
     input.value = '';
     setTimeout(()=> {
       const lq = q.toLowerCase();
-      let resp = null;
+      let r = null;
       for(const k in ARYAN_FACTS){
-        if(lq.includes(k)) { resp = ARYAN_FACTS[k]; break; }
+        if(lq.includes(k)) { r = ARYAN_FACTS[k]; break;}
       }
-      if(!resp){
-        if(lq.includes('name')) resp = "Aryan Sharma — the guy with stories & coffee.";
-        else if(lq.includes('coffee')) resp = ARYAN_FACTS["what’s aryan’s comfort drink"];
-        else if(lq.includes('study')) resp = ARYAN_FACTS["what is aryan currently studying"];
-        else resp = "Ask me anything about Aryan ☕🙂!";
+      if(!r){
+        if(lq.includes('name')) r = "Aryan Sharma — that guy with stories & coffee.";
+        else if(lq.includes('coffee')) r = ARYAN_FACTS["what’s aryan’s comfort drink"];
+        else if(lq.includes('study')) r = ARYAN_FACTS["what is aryan currently studying"];
+        else r = "Ask me anything about Aryan ☕🙂!";
       }
-      addMsg(resp, 'bot');
-    }, 300 + Math.random()*320);
+      addMsg(r, 'bot');
+    }, 260 + Math.random()*320);
   });
 
-  input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); send.click(); } });
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); send.click(); } });
 })();
 </script>
-
 </body>
 </html>
 """
 
-# Render component (place at top so canvas sits behind)
-components.html(hero_html, height=760, scrolling=False)
+# Render component with a large height so iframe tries to fill viewport; CSS below forces iframe to 100vh
+components.html(hero_html, height=900, scrolling=False)
 
-# ---------------- VERY ROBUST STREAMLIT TRANSPARENCY OVERRIDE ----------------
-# This CSS aggressively forces Streamlit to be transparent so the canvas and glass hero appear as intended.
+# ---------------- VERY ROBUST STREAMLIT TRANSPARENCY + FULLSCREEN override ----------------
 st.markdown(
     """
     <style>
-    /* Make page background transparent so canvas shows through */
-    html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] > div, .block-container {
+    /* Force the Streamlit app to be transparent and remove default padding so the component fills the entire viewport */
+    html, body, .stApp, [data-testid="stAppViewContainer"], .block-container {
         background: transparent !important;
         background-image: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
-    /* Target common Streamlit generated class name patterns and remove background/shadow */
-    .css-18e3th9, .css-1lcbmhc, .css-1d391kg, .css-hi6a2p, .css-1offfwp, .css-1avcm0n, .st-cz, .st-b1 {
+    /* Force any iframe (component) to be full height in the viewport */
+    iframe {
+        height: 100vh !important;
+        min-height: 100vh !important;
+        max-height: 100vh !important;
+    }
+
+    /* Target common Streamlit wrapper class patterns & remove their backgrounds */
+    .css-18e3th9, .css-1lcbmhc, .css-1d391kg, .css-hi6a2p, .css-1offfwp, .css-1avcm0n,
+    .st-cz, .st-b1, .stImage {
         background: transparent !important;
         box-shadow: none !important;
         border: none !important;
     }
 
-    /* Block container padding removal (so hero sits near top) */
-    .block-container { padding-top: 0 !important; padding-left: 28px !important; padding-right: 28px !important; }
+    /* Remove top toolbar gap and header */
+    div[data-testid="stToolbar"], header[role="banner"] { display:none !important; height:0 !important; }
 
-    /* Make headers and text lighter for contrast */
-    .css-10trblm, .stMarkdown, .stText, .stButton, .css-1kyxreq {
-        color: #eaf6ff !important;
-    }
+    /* Block container spacing adjustments */
+    .block-container { padding-top: 0 !important; padding-left: 20px !important; padding-right: 20px !important; }
 
-    /* Gallery images style */
-    .stImage img { border-radius: 12px; box-shadow: 0 14px 40px rgba(0,0,0,0.45); }
+    /* Text color for readability */
+    .css-10trblm, .stMarkdown, .stText, .stButton { color: #eaf6ff !important; }
 
-    /* Ensure the components iframe is above background but below Streamlit controls */
-    .stApp > div:nth-child(1) { background: transparent !important; }
+    /* Make images rounded and glassy */
+    .stImage img { border-radius:12px !important; box-shadow: 0 14px 40px rgba(0,0,0,0.45) !important; }
 
-    /* Mobile tweaks */
-    @media (max-width: 780px){
-      .block-container { padding-left: 12px !important; padding-right: 12px !important; }
+    @media (max-width:780px){
+      .block-container { padding-left:10px !important; padding-right:10px !important; }
+      iframe { height: 100vh !important; }
     }
     </style>
     """, unsafe_allow_html=True
 )
 
-# ---------------- PAGE CONTENT (Streamlit containers) ----------------
+# ---------------- PAGE CONTENT (Streamlit containers below) ----------------
 st.markdown("---")
-col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([1, 2], gap="large")
 
 with col1:
     st.markdown("### 📸 Photos (Gallery)")
@@ -430,11 +416,11 @@ with col1:
     if not images:
         st.info("No images found. Add files to the `gallery/` folder.")
     else:
-        for i, img in enumerate(images):
-            # display as modern rounded images
-            st.markdown(f"<div style='margin-bottom:14px;border-radius:12px;overflow:hidden;'><img src='{img}' style='width:100%;display:block;'/></div>", unsafe_allow_html=True)
-            if i >= 5:
-                break
+        # modern rounded previews
+        for i, img in enumerate(images[:6]):
+            st.markdown(
+                f"<div style='margin-bottom:14px;border-radius:12px;overflow:hidden;'><img src='{img}' style='width:100%;display:block;'/></div>",
+                unsafe_allow_html=True)
         if len(images) > 6:
             st.caption(f"Plus {len(images)-6} more — they'll appear here automatically.")
 
@@ -447,7 +433,7 @@ with col2:
         if st.form_submit_button("Send"):
             if m and m.strip():
                 st.session_state.anon_msgs.insert(0, m.strip())
-                st.success("Sent anonymouly — visible in this session.")
+                st.success("Sent anonymously — visible in this session.")
     for mm in st.session_state.anon_msgs[:8]:
         st.info(mm)
 
@@ -491,6 +477,5 @@ st.markdown("### ⚙️ Notes & Setup")
 st.markdown("""
 - Place `resume.pdf` at the project root so `/resume.pdf` resolves (used by the Download Resume link).
 - Gallery images go in `gallery/`. Blog posts go in `blog_posts/` as `.md`.
-- To adjust star density or nebula color, edit the canvas JS in the `hero_html` string above.
-- If you want server-side chat logging or an LLM-backed chat, I can wire it up next.
+- If Streamlit still shows a white stripe in your particular Codespace, send a screenshot of the page DOM (or tell me Streamlit version) and I'll patch the selector immediately — I already covered the most common class patterns.
 """)
