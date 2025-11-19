@@ -2,58 +2,53 @@
 import os
 import re
 import json
+import time
 import streamlit as st
 from markdown import markdown
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
+# ---------- Paths ----------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
+# ---------- Helpers ----------
 def get_gallery_images():
     if not os.path.exists(GALLERY_DIR):
         return []
-    files = [f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
-    files.sort()
-    # Use relative paths that the browser can load via Streamlit static serving
+    files = [f for f in sorted(os.listdir(GALLERY_DIR)) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
     return [os.path.join("gallery", f) for f in files]
 
 def get_posts():
-    posts = []
+    out = []
     if not os.path.exists(POSTS_DIR):
-        return posts
-    for fname in sorted(os.listdir(POSTS_DIR)):
-        if not fname.endswith(".md"):
+        return out
+    for fn in sorted(os.listdir(POSTS_DIR)):
+        if not fn.endswith(".md"):
             continue
-        slug = fname[:-3]
-        path = os.path.join(POSTS_DIR, fname)
+        path = os.path.join(POSTS_DIR, fn)
         with open(path, "r", encoding="utf-8") as fh:
-            content = fh.read()
-        # parse front matter simple '---' style
+            txt = fh.read()
         meta = {}
-        body = content
-        m = re.match(r'---\n(.*?)\n---', content, re.DOTALL)
+        body = txt
+        m = re.match(r'---\n(.*?)\n---', txt, re.DOTALL)
         if m:
             meta_block = m.group(1)
             for line in meta_block.splitlines():
                 if ':' in line:
                     k, v = line.split(':', 1)
                     meta[k.strip()] = v.strip()
-            body = content[m.end():].strip()
-        html = markdown(body)
-        posts.append({
-            "slug": slug,
-            "title": meta.get("title", slug.replace('-', ' ').capitalize()),
+            body = txt[m.end():].strip()
+        out.append({
+            "title": meta.get("title", fn[:-3].replace('-', ' ').title()),
             "date": meta.get("date", ""),
-            "author": meta.get("author", ""),
-            "summary": meta.get("summary", ""),
-            "html": html
+            "html": markdown(body)
         })
-    return posts
+    return out
 
-# 20 facts you gave (in JS we'll inject them as ST_ARYAN_FACTS)
+# ---------- Chat facts (your Q&A) ----------
 ARYAN_FACTS = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
@@ -77,330 +72,394 @@ ARYAN_FACTS = {
     "what does aryan dream about": "A life full of learning, creativity, and endless coffee."
 }
 
-# Prepare data to inject into HTML
+# ---------- Session: anonymous writings ----------
+if "anon_messages" not in st.session_state:
+    st.session_state.anon_messages = []
+
+# If the user submitted via Streamlit form, store the message
+with st.sidebar.form("anon_form", clear_on_submit=True):
+    st.write("✍️ Share anonymously (this will appear in the page)")
+    msg = st.text_area("Write anonymously...", height=140)
+    submitted = st.form_submit_button("Send anonymously")
+    if submitted and msg.strip():
+        st.session_state.anon_messages.insert(0, {"msg": msg.strip(), "time": time.asctime()})
+        st.success("Message sent — refresh the page (or scroll) to see it in the site.")
+
+# Gather data for injection
 gallery_urls = get_gallery_images()
 posts = get_posts()
+anon_messages = st.session_state.anon_messages
+
+# Social links
+INSTAGRAM = "https://instagram.com/aryanxsharma26"
+LINKEDIN = "https://www.linkedin.com/in/aryan-sharma99999"
+
+# Convert to JSON strings for safe injection
 js_gallery = json.dumps(gallery_urls)
 js_posts = json.dumps(posts)
+js_anon = json.dumps(anon_messages)
 js_facts = json.dumps(ARYAN_FACTS)
+js_social = json.dumps({"instagram": INSTAGRAM, "linkedin": LINKEDIN})
 
-# Full-page HTML (the entire site rendered inside the component)
+# ---------- Full HTML (single component) ----------
 html = f"""
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aryan Sharma — Portfolio</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <title>Aryan — Portfolio</title>
   <style>
     :root {{
-      --text: #eaf6ff;
+      --accent1: #b14cff;
+      --accent2: #7a3cff;
       --glass: rgba(255,255,255,0.03);
-      --accent: #8db3ff;
+      --text: #eaf6ff;
     }}
-    html,body{{height:100%;margin:0;padding:0;overflow:auto;font-family:Inter,system-ui; background: #070814; color:var(--text);}}
-    /* full canvas background covers whole viewport */
-    #galaxy-wrap{{position:fixed;inset:0;z-index:0;pointer-events:none;}}
-    canvas{{width:100%;height:100%;display:block;}}
+    html,body{{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Arial;color:var(--text);background:#060110;overflow-y:auto;}}
+    /* Canvas background covers whole viewport and scroll area */
+    #anim-bg {{ position: fixed; inset: 0; z-index: 0; pointer-events:none; }}
+    /* App container above canvas */
+    .site {{ position: relative; z-index: 5; min-height:100vh; display:flex; flex-direction:column; align-items:center; gap:28px; padding:40px 32px; box-sizing:border-box; }}
+    /* Hero */
+    .hero-card {{
+      width: min(1150px, 92%);
+      border-radius:20px;
+      padding:40px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.03);
+      box-shadow: 0 40px 120px rgba(6,6,12,0.7);
+      text-align:center;
+      backdrop-filter: blur(10px) saturate(130%);
+      -webkit-backdrop-filter: blur(10px) saturate(130%);
+    }}
+    .hero-title{{ font-size:48px; font-weight:800; margin:0; background: linear-gradient(90deg,#ffd1ff,#c8b1ff); -webkit-background-clip:text; color:transparent; }}
+    .hero-sub{{ margin-top:8px; font-size:18px; color: rgba(230,240,255,0.95); }}
+    .typewrap{{ margin-top:14px; font-weight:700; font-size:20px; color:#d6c9ff; }}
+    .cta{{ display:flex; gap:12px; justify-content:center; margin-top:20px; }}
+    .btn{{ padding:10px 18px; border-radius:999px; border:none; cursor:pointer; font-weight:800; }}
+    .btn-primary{{ background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:#0b1220; box-shadow: 0 10px 30px rgba(16,8,40,0.55); }}
+    .btn-ghost{{ background:transparent; color:#dfefff; border:1px solid rgba(255,255,255,0.04); }}
 
-    /* top-level app container */
-    .app{{position:relative;z-index:5;min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:28px;padding:28px 36px;box-sizing:border-box;}}
+    /* Layout grid */
+    .main-grid{{ width: min(1150px, 96%); display:grid; grid-template-columns: 300px 1fr; gap:28px; align-items:start; box-sizing:border-box; }}
+    .col-left, .col-right{{ box-sizing:border-box; }}
+    .glass-card{{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 36px rgba(6,6,12,0.45); }}
+    .section-title{{ font-weight:800; color:#d6e8ff; display:flex; gap:10px; align-items:center; }}
 
-    /* hero */
-    .hero{{width:100%;max-width:1200px;border-radius:16px;padding:44px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 40px 110px rgba(2,6,20,0.6);border:1px solid rgba(255,255,255,0.04);text-align:center;}}
-    .hero h1{{margin:0;font-size:48px;font-weight:800;color:#e9f6ff}}
-    .hero p{{margin:10px 0 0 0;color:rgba(230,240,255,0.9)}}
-    .roles{{margin-top:12px;font-weight:700;color:#d2e8ff}}
+    /* Gallery grid */
+    .gallery-grid{{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin-top:10px; }}
+    .gallery-grid img{{ width:100%; height:140px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.025); transition: transform .25s ease, box-shadow .25s ease; }}
+    .gallery-grid img:hover{{ transform: translateY(-6px); box-shadow:0 18px 50px rgba(10,6,30,0.6); }}
 
-    .cta{{margin-top:20px;display:flex;gap:12px;justify-content:center;align-items:center}}
-    .btn{{padding:10px 18px;border-radius:999px;border:none;font-weight:700;cursor:pointer}}
-    .btn-primary{{background:var(--accent);color:#071827;box-shadow:0 8px 26px rgba(20,40,80,0.18)}}
-    .btn-ghost{{background:transparent;color:#dfefff;border:1px solid rgba(255,255,255,0.06)}}
+    /* Posts */
+    .post-card{ margin-bottom:18px; padding:10px; border-radius:10px; }
+    .post-card h3{ margin:0; color:#eaf6ff; }
+    .post-card .date{ color:rgba(200,220,255,0.65); font-size:13px; margin-bottom:8px; }
 
-    /* layout below hero */
-    .main-grid{{width:100%;max-width:1200px;display:grid;grid-template-columns:320px 1fr;gap:32px;align-items:start;box-sizing:border-box;padding-bottom:64px}}
-    .left-col{{display:flex;flex-direction:column;gap:14px}}
-    .glass-card{{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.04);box-shadow:0 14px 40px rgba(2,6,20,0.35);padding:14px;border-radius:12px;color:var(--text)}}
-    .section-title{font-weight:700;color:#d4ecff;margin-bottom:12px;display:flex;gap:8px;align-items:center}
+    /* Projects */
+    .projects-grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:12px; }
+    .proj{ padding:12px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01)); }
 
-    /* gallery grid inside left column */
-    .gallery-grid{display:grid;grid-template-columns: repeat(2, 1fr);gap:10px;}
-    .gallery-grid img{width:100%;height:100%;object-fit:cover;border-radius:10px;display:block;box-shadow:0 10px 28px rgba(0,0,0,0.35)}
+    /* Footer / socials */
+    .footer{ width: min(1150px,96%); padding:10px 12px; color: rgba(200,220,255,0.85); display:flex; justify-content:space-between; align-items:center; }
 
-    /* right column - blog & writings */
-    .post-card{margin-bottom:18px}
-    .post-card h2{margin:0 0 8px 0;color:#eaf6ff}
-    .post-card .date{color:rgba(200,220,255,0.68);font-size:13px;margin-bottom:12px}
+    /* Chat orb */
+    .chat-orb{ position: fixed; right:28px; bottom:28px; width:68px; height:68px; border-radius:999px; z-index:9999; display:flex; align-items:center; justify-content:center; cursor:pointer; background: linear-gradient(180deg, #110017, #1a0028); border:2px solid var(--accent1); box-shadow:0 40px 90px rgba(120,40,180,0.18); color: #fff; font-size:28px;}
+    .chat-pop{ position: fixed; right:28px; bottom:108px; width:380px; max-width:92vw; border-radius:12px; overflow:hidden; z-index:9999; display:none; box-shadow:0 30px 100px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.03); background: linear-gradient(180deg, rgba(6,8,12,0.98), rgba(8,10,16,0.98)); }
+    .chat-head{ padding:12px; font-weight:800; color:#dff6ff; border-bottom:1px solid rgba(255,255,255,0.03); }
+    .chat-body{ max-height:260px; overflow:auto; padding:12px; color:#eaf6ff; }
+    .chat-input{ display:flex; gap:8px; padding:12px; border-top:1px solid rgba(255,255,255,0.02); }
+    .chat-input input{ flex:1; padding:10px; border-radius:10px; border:none; background: rgba(255,255,255,0.04); color:var(--text); }
 
-    /* projects area */
-    .projects{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:8px}
-    .proj{padding:12px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 12px 30px rgba(0,0,0,0.35)}
-
-    /* floating chat orb */
-    .chat-orb{position:fixed;right:26px;bottom:28px;width:64px;height:64px;border-radius:999px;z-index:60;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(16,18,22,0.96), rgba(10,12,16,0.96));box-shadow:0 32px 90px rgba(0,0,0,0.6);cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
-    .chat-orb:hover{transform:translateY(-6px)}
-
-    .island{position:fixed;right:26px;bottom:108px;width:420px;max-width:92vw;z-index:70;display:none}
-    .island.show{display:block}
-    .island .inner{border-radius:12px;overflow:hidden;background:linear-gradient(180deg, rgba(8,10,14,0.96), rgba(12,14,18,0.96));box-shadow:0 30px 100px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.03)}
-    .island .header{padding:12px 14px;font-weight:700;color:#cfeeff;background:rgba(255,255,255,0.02)}
-    .island .body{padding:12px;max-height:260px;overflow:auto;color:#eaf6ff}
-    .island .footer{padding:12px;display:flex;gap:8px}
-    .chat-input{flex:1;padding:10px;border-radius:10px;border:none;background:#0d1114;color:#eaf6ff}
-
-    /* footer */
-    .footer{width:100%;max-width:1200px;color:rgba(210,230,255,0.85);padding:18px 0}
-
-    /* responsive */
-    @media (max-width:980px){ .main-grid{grid-template-columns:1fr} .gallery-grid{grid-template-columns:repeat(3,1fr)} }
-    @media (max-width:520px){ .gallery-grid{grid-template-columns:repeat(2,1fr)} .hero h1{font-size:28px} .island{left:12px;right:12px;bottom:84px} }
+    /* small responsive tweaks */
+    @media (max-width:980px) {{
+      .main-grid{{ grid-template-columns: 1fr; }}
+      .gallery-grid img{{ height:120px; }}
+    }}
   </style>
 </head>
 <body>
-  <div id="galaxy-wrap"><canvas id="galaxy"></canvas></div>
+  <canvas id="anim-bg"></canvas>
 
-  <div class="app" role="main" aria-label="Aryan portfolio app">
-    <div class="hero" role="banner">
-      <h1>Aryan Sharma</h1>
-      <p>Welcome to my personal website!</p>
-      <div class="roles" id="role">tech enthusiast</div>
+  <div class="site">
+    <!-- HERO -->
+    <div class="hero-card" role="banner" aria-label="Hero">
+      <div class="hero-title">ARYAN SHARMA</div>
+      <div class="hero-sub">Welcome to my personal website!</div>
+      <div class="typewrap">I'm a <span id="typewriter">web developer</span></div>
       <div class="cta">
-        <a class="btn btn-primary" href="/resume.pdf#chatbot-section" target="_blank">Download Resume</a>
-        <button class="btn btn-ghost" onclick="document.getElementById('projects').scrollIntoView({behavior:'smooth'})">Get In Touch</button>
+        <a class="btn btn-primary" href="/resume.pdf#chatbot-section" target="_blank" rel="noreferrer">Download Resume</a>
+        <a class="btn btn-ghost" href="{LINKEDIN}" target="_blank" rel="noreferrer">LinkedIn</a>
+        <a class="btn btn-ghost" href="{INSTAGRAM}" target="_blank" rel="noreferrer">Instagram</a>
       </div>
     </div>
 
-    <div class="main-grid">
-      <div class="left-col">
+    <!-- MAIN GRID -->
+    <div class="main-grid" role="main">
+      <div class="col-left">
         <div class="glass-card">
           <div class="section-title">📸 Photos (Gallery)</div>
           <div class="gallery-grid" id="galleryGrid">
-            <!-- JS injects gallery images -->
+            <!-- images injected via JS -->
           </div>
         </div>
+
+        <div style="height:18px"></div>
+
+        <div class="glass-card">
+          <div class="section-title">💼 Projects</div>
+          <div class="projects-grid" id="projectsGrid">
+            <!-- projects -->
+            <div class="proj"><strong>Chatbot Website</strong><div style="opacity:.8">Client-side Q&A & demo.</div></div>
+            <div class="proj"><strong>Portfolio Builder</strong><div style="opacity:.8">Template & theme.</div></div>
+            <div class="proj"><strong>AI Experiments</strong><div style="opacity:.8">Small ML projects.</div></div>
+          </div>
+        </div>
+
       </div>
 
-      <div class="right-col">
+      <div class="col-right">
         <div class="glass-card">
           <div class="section-title">✍️ Writings (Anonymous)</div>
-          <div id="writingsArea">
-            <p style="margin:0 0 8px 0;color:rgba(210,230,255,0.9)">Use the Streamlit form below to post anonymously — posts appear in this UI automatically.</p>
-            <div id="anonList"></div>
+          <div id="anonList" style="margin-top:8px">
+            <!-- anon messages show here via JS -->
           </div>
         </div>
+
+        <div style="height:18px"></div>
 
         <div class="glass-card">
           <div class="section-title">📰 Blog Posts</div>
-          <div id="postsArea">
-            <!-- posts injected by JS -->
+          <div id="postsArea" style="margin-top:12px">
+            <!-- posts injected via JS -->
           </div>
         </div>
 
-        <div id="projects" style="margin-top:12px"></div>
       </div>
     </div>
 
-    <div class="projects" style="max-width:1200px" id="projectsList">
-      <div class="proj"> <strong>Chatbot App</strong><div style="opacity:.85">Client-side Q&A with Aryan's answers.</div></div>
-      <div class="proj"> <strong>Portfolio Website</strong><div style="opacity:.85">Glass UI with full-page galaxy background.</div></div>
-      <div class="proj"> <strong>AI Experiments</strong><div style="opacity:.85">Small experiments & projects.</div></div>
-    </div>
-
-    <div class="footer">Contact: DM on Instagram <a href="https://instagram.com/aryanxsharma26" target="_blank" style="color:#cde8ff">aryanxsharma26</a></div>
-  </div>
-
-  <div class="chat-orb" id="chatOrb" aria-label="Open chat">💬</div>
-  <div class="island" id="island" aria-hidden="true">
-    <div class="inner">
-      <div class="header">Ask me about Aryan ☕</div>
-      <div class="body" id="chatBody" aria-live="polite"></div>
-      <div class="footer">
-        <input id="chatInput" class="chat-input" placeholder="Who is Aryan?" />
-        <button id="chatSend" class="btn btn-primary">Send</button>
-      </div>
+    <div class="footer">
+      <div>© {time.strftime('%Y')} Aryan Sharma</div>
+      <div>Built with ❤️ · <a href="{LINKEDIN}" target="_blank" style="color:#cde8ff">LinkedIn</a> · <a href="{INSTAGRAM}" target="_blank" style="color:#cde8ff">Instagram</a></div>
     </div>
   </div>
 
-  <script>
-    // Injected data from Python (will be replaced by Streamlit script below)
-    window.ST_GALLERY_URLS = {js_gallery};
-    window.ST_POSTS = {js_posts};
-    window.ST_ARYAN_FACTS = {js_facts};
+  <div class="chat-orb" id="chatOrb" title="Ask me about Aryan">💬</div>
+  <div class="chat-pop" id="chatPop" aria-hidden="true">
+    <div class="chat-head">Ask me about Aryan ☕</div>
+    <div class="chat-body" id="chatBody"></div>
+    <div class="chat-input">
+      <input id="chatInput" placeholder="Who is Aryan?"/>
+      <button id="chatSend" style="background:var(--accent1);border-radius:8px;padding:8px 12px;border:none;font-weight:800;color:#17041a;">Send</button>
+    </div>
+  </div>
 
-    /* --------------- Canvas galaxy (multi-layered) --------------- */
-    (function(){
-      const canvas = document.getElementById('galaxy');
-      const ctx = canvas.getContext('2d');
-      function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
-      resize(); window.addEventListener('resize', resize);
+<script>
+  // Injected data (from Streamlit python)
+  window.ST_GALLERY = {js_gallery};
+  window.ST_POSTS = {js_posts};
+  window.ST_ANON = {js_anon};
+  window.ST_FACTS = {js_facts};
+  window.ST_SOCIAL = {js_social};
 
-      const layers = [
-        {count:120, speed:0.18, size:[0.3,0.9], alpha:0.6},
-        {count:60, speed:0.5, size:[1.2,2.2], alpha:0.9},
-        {count:30, speed:1.1, size:[2.8,4.0], alpha:1.0}
-      ];
-      let groups = [];
-      function make(){
-        groups=[];
-        for(const L of layers){
-          const arr=[];
-          for(let i=0;i<L.count;i++){
-            arr.push({
-              x: Math.random()*canvas.width,
-              y: Math.random()*canvas.height,
-              r: Math.random()*(L.size[1]-L.size[0]) + L.size[0],
-              vx: (Math.random()*2-1)*L.speed*0.4,
-              vy: (Math.random()*2-1)*L.speed*0.4,
-              a: L.alpha*(0.6 + Math.random()*0.4)
-            });
-          }
-          groups.push(arr);
-        }
-      }
-      make();
-      let t=0, mx=canvas.width/2, my=canvas.height/2;
-      window.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; });
+  /* ----------------- Canvas animated galaxy (full page) ----------------- */
+  (function(){
+    const canvas = document.getElementById('anim-bg');
+    const ctx = canvas.getContext('2d');
+    function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
 
-      function drawNebula(){
-        const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
-        g.addColorStop(0,'rgba(6,10,18,0.96)');
-        g.addColorStop(1,'rgba(12,14,28,0.96)');
-        ctx.fillStyle=g; ctx.fillRect(0,0,canvas.width,canvas.height);
-        const cx = canvas.width*0.68 + Math.sin(t*0.2)*120;
-        const cy = canvas.height*0.28 + Math.cos(t*0.15)*80;
-        const rg = ctx.createRadialGradient(cx,cy,0,cx,cy, Math.max(canvas.width,canvas.height)*0.9);
-        rg.addColorStop(0, 'rgba(60,40,120,0.13)');
-        rg.addColorStop(0.3,'rgba(80,60,160,0.07)');
-        rg.addColorStop(0.6,'rgba(6,10,20,0.02)');
-        ctx.globalCompositeOperation='lighter'; ctx.fillStyle=rg; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.globalCompositeOperation='source-over';
-      }
-      function drawStars(){
-        for(let gi=0;gi<groups.length;gi++){
-          const group=groups[gi];
-          for(const s of group){
-            const px=(mx - canvas.width/2)*(0.0005 + gi*0.001);
-            const py=(my - canvas.height/2)*(0.0005 + gi*0.001);
-            s.x += s.vx; s.y += s.vy;
-            if(s.x < -10) s.x = canvas.width+10;
-            if(s.x > canvas.width+10) s.x = -10;
-            if(s.y < -10) s.y = canvas.height+10;
-            if(s.y > canvas.height+10) s.y = -10;
-            ctx.beginPath();
-            ctx.fillStyle = 'rgba(255,255,255,' + (s.a * (0.6 + Math.sin((t + s.x + s.y)/90)*0.35)) + ')';
-            ctx.arc(s.x + px*40, s.y + py*40, s.r, 0, Math.PI*2); ctx.fill();
-          }
-        }
-      }
-      function loop(){ t+=0.016; drawNebula(); drawStars(); requestAnimationFrame(loop); }
-      loop();
-    })();
-
-    /* --------------- hero typewriter --------------- */
-    (function(){
-      setTimeout(()=>document.querySelector('.hero').classList.add('show'),120);
-      const roles = ["web developer","tech enthusiast","programmer","writer","editor"];
-      let idx=0,pos=0,fw=true,el=document.getElementById('role');
-      (function tick(){
-        const cur=roles[idx];
-        if(fw){ pos++; el.textContent = cur.slice(0,pos); if(pos===cur.length){ fw=false; setTimeout(tick,800); return; } }
-        else{ pos--; el.textContent = cur.slice(0,pos); if(pos===0){ fw=true; idx=(idx+1)%roles.length; setTimeout(tick,400); return; } }
-        setTimeout(tick,70);
-      })();
-    })();
-
-    /* --------------- inject posts & gallery into DOM --------------- */
-    (function(){
-      // gallery
-      const gallery = window.ST_GALLERY_URLS || [];
-      const grid = document.getElementById('galleryGrid');
-      grid.innerHTML = '';
-      if(gallery.length === 0){
-        grid.innerHTML = "<div style='grid-column:1/-1;color:rgba(200,220,255,0.6);padding:8px'>No images found. Put files in gallery/.</div>";
-      } else {
-        for(const url of gallery){
-          const d = document.createElement('div');
-          d.innerHTML = "<img src='"+url+"' alt='gallery image'/>";
-          grid.appendChild(d);
-        }
-      }
-
-      // posts
-      const posts = window.ST_POSTS || [];
-      const postsArea = document.getElementById('postsArea');
-      postsArea.innerHTML = '';
-      if(posts.length === 0){
-        postsArea.innerHTML = "<div style='color:rgba(200,220,255,0.65)'>No blog posts found. Add .md files into blog_posts/.</div>";
-      } else {
-        for(const p of posts){
-          const wrap = document.createElement('div');
-          wrap.className = 'post-card';
-          wrap.innerHTML = "<h2>"+(p.title||'Untitled')+"</h2>" +
-                           (p.date?("<div class='date'>"+p.date+"</div>"):"") +
-                           "<div style='color:rgba(220,235,255,0.9)'>"+(p.html||'')+"</div>";
-          postsArea.appendChild(wrap);
-        }
-      }
-    })();
-
-    /* --------------- chat logic (uses ST_ARYAN_FACTS) --------------- */
-    (function(){
-      const orb = document.getElementById('chatOrb');
-      const island = document.getElementById('island');
-      const chatBody = document.getElementById('chatBody');
-      const input = document.getElementById('chatInput');
-      const send = document.getElementById('chatSend');
-      function addMsg(t, who){
-        const el=document.createElement('div');
-        el.className='msg ' + (who==='user'?'user':'bot');
-        el.style.margin='8px 0'; el.style.padding='8px 10px'; el.style.borderRadius='10px';
-        if(who==='user'){ el.style.background='rgba(255,255,255,0.08)'; el.style.color='#081827'; el.style.marginLeft='auto'; }
-        else { el.style.background='rgba(110,140,255,0.06)'; el.style.color='#eaf6ff'; }
-        el.textContent=t; chatBody.appendChild(el); chatBody.scrollTop = chatBody.scrollHeight;
-      }
-      orb.addEventListener('click', ()=>{
-        const show = island.classList.toggle('show');
-        island.setAttribute('aria-hidden', show ? 'false' : 'true');
-        input.focus();
-        if(chatBody.children.length === 0) addMsg("Hi — I'm Aryan's assistant. Ask me about Aryan ☕", 'bot');
+    // stars + nebula
+    const stars = [];
+    for(let i=0;i<520;i++){
+      stars.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        r: Math.random()*1.8 + 0.2,
+        s: Math.random()*0.6 + 0.1,
+        o: Math.random()*0.8 + 0.2
       });
-      send.addEventListener('click', ()=>{
-        const q=(input.value||'').trim(); if(!q) return; addMsg(q,'user'); input.value='';
-        setTimeout(()=> {
-          const lq = q.toLowerCase();
-          let out = null;
-          const facts = window.ST_ARYAN_FACTS || {};
-          for(const k in facts){ if(lq.includes(k)) { out = facts[k]; break; } }
-          if(!out){
-            if(lq.includes('name')) out = "Aryan Sharma — that guy with stories & coffee.";
-            else if(lq.includes('coffee')) out = facts["what’s aryan’s comfort drink"] || "Coffee ☕";
-            else if(lq.includes('study')) out = facts["what is aryan currently studying"] || "Pursuing a Bachelor's degree.";
-            else out = "Ask me anything about Aryan ☕🙂!";
-          }
-          addMsg(out,'bot');
-        }, 260 + Math.random()*420);
-      });
-      input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); send.click(); }});
-    })();
+    }
 
-  </script>
+    let t = 0;
+    function draw(){
+      t += 0.01;
+      // base gradient
+      const g = ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+      g.addColorStop(0, '#1b0126');
+      g.addColorStop(0.4, '#23003b');
+      g.addColorStop(1, '#090015');
+      ctx.fillStyle = g;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+
+      // moving subtle nebula blob
+      const cx = canvas.width * 0.7 + Math.sin(t*0.6)*120;
+      const cy = canvas.height * 0.3 + Math.cos(t*0.4)*90;
+      const rad = Math.max(canvas.width, canvas.height) * 0.8;
+      const rg = ctx.createRadialGradient(cx,cy,0,cx,cy,rad);
+      rg.addColorStop(0, 'rgba(110,20,150,0.12)');
+      rg.addColorStop(0.3, 'rgba(90,30,160,0.06)');
+      rg.addColorStop(0.7, 'rgba(20,10,40,0.02)');
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = rg;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.globalCompositeOperation = 'source-over';
+
+      // stars
+      for(const s of stars){
+        ctx.beginPath();
+        const alpha = 0.4 + Math.sin((t*5 + s.x + s.y)/80)*0.3;
+        ctx.fillStyle = 'rgba(255,255,255,' + (s.o * alpha) + ')';
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fill();
+        s.x += s.s;
+        if(s.x > canvas.width + 20) s.x = -20;
+      }
+
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  /* ----------------- Typewriter effect ----------------- */
+  (function(){
+    const roles = ["web developer","writer","learner","tech enthusiast","video editor"];
+    let ridx = 0, pos = 0, forward = true;
+    const el = document.getElementById('typewriter');
+    function tick(){
+      const cur = roles[ridx];
+      if(forward){
+        pos++; el.textContent = cur.slice(0,pos);
+        if(pos === cur.length){ forward=false; setTimeout(tick,900); return; }
+      } else {
+        pos--; el.textContent = cur.slice(0,pos);
+        if(pos === 0){ forward=true; ridx=(ridx+1)%roles.length; setTimeout(tick,400); return; }
+      }
+      setTimeout(tick,70);
+    }
+    tick();
+  })();
+
+  /* ----------------- Inject gallery, posts, anon ----------------- */
+  (function(){
+    const gallery = window.ST_GALLERY || [];
+    const posts = window.ST_POSTS || [];
+    const anon = window.ST_ANON || [];
+
+    const gnode = document.getElementById('galleryGrid');
+    if(gallery.length === 0){
+      gnode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No images found in gallery/</div>";
+    } else {
+      gnode.innerHTML = '';
+      for(const u of gallery){
+        const d = document.createElement('div');
+        d.innerHTML = `<img src="${u}" alt="gallery">`;
+        gnode.appendChild(d);
+      }
+    }
+
+    const postsNode = document.getElementById('postsArea');
+    if(posts.length === 0){
+      postsNode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No blog posts found in blog_posts/</div>";
+    } else {
+      postsNode.innerHTML = '';
+      for(const p of posts){
+        const card = document.createElement('div');
+        card.className = 'post-card';
+        card.innerHTML = `<h3>${p.title}</h3>${p.date?("<div class='date'>"+p.date+"</div>"):""}<div style='margin-top:8px;color:rgba(220,235,255,0.95)'>${p.html}</div>`;
+        postsNode.appendChild(card);
+      }
+    }
+
+    const anonNode = document.getElementById('anonList');
+    if(anon.length === 0){
+      anonNode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No anonymous writings yet. Use the sidebar form to post.</div>";
+    } else {
+      anonNode.innerHTML = '';
+      for(const m of anon){
+        const el = document.createElement('div');
+        el.className = 'glass-card';
+        el.style.marginBottom = '8px';
+        el.innerHTML = `<div style='font-size:14px;color:rgba(220,235,255,0.95)'>${m.msg}</div><div style='font-size:11px;color:rgba(180,200,220,0.6);margin-top:6px'>${m.time}</div>`;
+        anonNode.appendChild(el);
+      }
+    }
+  })();
+
+  /* ----------------- Chat logic ----------------- */
+  (function(){
+    const orb = document.getElementById('chatOrb');
+    const pop = document.getElementById('chatPop');
+    const body = document.getElementById('chatBody');
+    const input = document.getElementById('chatInput');
+    const send = document.getElementById('chatSend');
+    const facts = window.ST_FACTS || {};
+
+    function addMsg(txt, who){
+      const d = document.createElement('div');
+      d.textContent = txt;
+      d.style.padding = '8px 10px';
+      d.style.marginBottom = '8px';
+      d.style.borderRadius = '10px';
+      if(who === 'user'){
+        d.style.background = 'rgba(255,255,255,0.08)';
+        d.style.textAlign = 'right';
+      } else {
+        d.style.background = 'rgba(110,140,255,0.06)';
+      }
+      body.appendChild(d); body.scrollTop = body.scrollHeight;
+    }
+
+    orb.addEventListener('click', ()=>{
+      const show = pop.style.display === 'block';
+      pop.style.display = show ? 'none' : 'block';
+      if(!show && body.children.length === 0) addMsg("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
+      input.focus();
+    });
+
+    send.addEventListener('click', ()=>{
+      const q = (input.value||'').trim(); if(!q) return;
+      addMsg(q,'user'); input.value = '';
+      setTimeout(()=> {
+        const lq = q.toLowerCase();
+        let out = null;
+        for(const k in facts){ if(lq.includes(k)) { out = facts[k]; break; } }
+        if(!out){
+          if(lq.includes('name')) out = "Aryan Sharma — that guy with stories & coffee.";
+          else if(lq.includes('coffee')) out = facts["what’s aryan’s comfort drink"] || "Coffee ☕";
+          else out = "Ask me anything about Aryan ☕🙂!";
+        }
+        addMsg(out,'bot');
+      }, 260 + Math.random()*420);
+    });
+
+    input.addEventListener('keydown', (e) => { if(e.key === 'Enter') { e.preventDefault(); send.click(); }});
+  })();
+
+</script>
 </body>
 </html>
 """
 
-# Render the component. It's the whole page, so request a tall height; then force iframe height below.
+# ---------- Render component ----------
+# Give a tall height to allow scrolling inside the HTML page
 components.html(html, height=900, scrolling=True)
 
-# Force the Streamlit iframe to be full height (aggressive)
-st.markdown("""
-<style>
-/* Force the component iframe to occupy the viewport so HTML "page" looks full-page */
-iframe[srcdoc] { height: 100vh !important; min-height:100vh !important; max-height:100vh !important; }
-html, body, .stApp, .block-container { background: transparent !important; padding:0 !important; margin:0 !important; }
-</style>
-""", unsafe_allow_html=True)
+# ---------- Force Streamlit page to be transparent so the canvas shows through ----------
+st.markdown(
+    """
+    <style>
+    html, body, .stApp, .block-container { background: transparent !important; }
+    iframe[srcdoc] { min-height: 100vh !important; height: 100vh !important; }
+    </style>
+    """, unsafe_allow_html=True
+)
 
-# Minimal Streamlit fallback: small info so user can still use streamlit controls if needed
-st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-st.markdown("### (If you prefer to edit content) — Gallery & blog are read from `gallery/` and `blog_posts/` in the repo root. Add images and `.md` files and refresh the page.", unsafe_allow_html=True)
+# ---------- Small Streamlit fallback content (in case) ----------
+st.markdown("### Editor: Gallery & Blog")
+st.markdown("Add images to the `/gallery` folder (jpg/png) and markdown posts to `/blog_posts` to see them appear in the page above.")
+st.markdown("---")
+st.write("LinkedIn:", LINKEDIN)
+st.write("Instagram:", INSTAGRAM)
