@@ -1,33 +1,33 @@
 # app.py
 import os
 import re
-import json
 import time
+import json
 import streamlit as st
-from markdown import markdown
 import streamlit.components.v1 as components
+from markdown import markdown
 
 st.set_page_config(page_title="Aryan Sharma", layout="wide", initial_sidebar_state="collapsed")
 
-# ---------- Paths ----------
+# ---------------- PATHS ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 
-# ---------- Helpers ----------
+# ---------------- HELPERS ----------------
 def get_gallery_images():
     if not os.path.exists(GALLERY_DIR):
         return []
     files = [f for f in sorted(os.listdir(GALLERY_DIR)) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
+    # return paths relative to the app root so Streamlit can serve them
     return [os.path.join("gallery", f) for f in files]
 
-def get_posts():
-    out = []
+def get_blog_posts():
+    posts = []
     if not os.path.exists(POSTS_DIR):
-        return out
-    for fn in sorted(os.listdir(POSTS_DIR)):
-        if not fn.endswith(".md"):
-            continue
+        return posts
+    files = [f for f in sorted(os.listdir(POSTS_DIR)) if f.endswith(".md")]
+    for fn in files:
         path = os.path.join(POSTS_DIR, fn)
         with open(path, "r", encoding="utf-8") as fh:
             txt = fh.read()
@@ -41,68 +41,69 @@ def get_posts():
                     k, v = line.split(':', 1)
                     meta[k.strip()] = v.strip()
             body = txt[m.end():].strip()
-        out.append({
+        html = markdown(body)
+        posts.append({
             "title": meta.get("title", fn[:-3].replace('-', ' ').title()),
             "date": meta.get("date", ""),
-            "html": markdown(body)
+            "html": html
         })
-    return out
+    return posts
 
-# ---------- Chat facts (your Q&A) ----------
+# ---------------- CHAT FACTS ----------------
 ARYAN_FACTS = {
     "who is aryan": "Aryan is that guy who turns everyday moments into funny stories without even trying.",
     "what is aryan currently studying": "Pursuing a Bachelor's degree. 🎓",
     "what makes aryan smile": "Random jokes, good coffee, and accidental life plot twists.",
-    "what’s aryan’s comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
+    "what's aryan's comfort drink": "Coffee ☕. Without it, he’s basically on airplane mode.",
     "does aryan like travelling": "Yes! Especially when the trip ends with coffee and mountain views.",
     "how does aryan handle pressure": "With calmness… and maybe two extra cups of coffee.",
     "what is aryan good at": "Turning simple moments into mini stories and making people laugh randomly.",
-    "what’s aryan’s vibe": "Chill, creative, and always up for a good conversation.",
+    "what's aryan's vibe": "Chill, creative, and always up for a good conversation.",
     "is aryan an introvert or extrovert": "Somewhere in between—depends on the energy, the weather, and the wifi.",
     "what motivates aryan": "New ideas, good music, and that one perfect cup of coffee.",
     "how does aryan face challenges": "With confidence… and sarcasm when required.",
-    "what’s something aryan can’t live without": "Coffee. None 😅. But coffee keeps him warm.",
+    "what's something aryan can't live without": "Coffee. None 😅. But coffee keeps him warm.",
     "what makes aryan unique": "His ability to make people laugh even when he’s not trying.",
-    "what’s aryan’s favorite weather": "Cold breeze + warm coffee = perfection.",
+    "what's aryan's favorite weather": "Cold breeze + warm coffee = perfection.",
     "how does aryan relax": "Storytelling, music, and wandering thoughts.",
     "what is aryan passionate about": "Tech, creativity, and turning ideas into reality.",
     "what is aryan learning right now": "New tech skills… one coffee at a time.",
     "what type of person is aryan": "Calm, humorous, and secretly a deep thinker.",
-    "what’s aryan’s favourite thing to do": "Observe life and turn it into funny, relatable stories.",
+    "what's aryan's favourite thing to do": "Observe life and turn it into funny, relatable stories.",
     "what does aryan dream about": "A life full of learning, creativity, and endless coffee."
 }
 
-# ---------- Session: anonymous writings ----------
+# ---------------- SESSION (anonymous writings) ----------------
 if "anon_messages" not in st.session_state:
     st.session_state.anon_messages = []
 
-# If the user submitted via Streamlit form, store the message
+# Sidebar form for anonymous messages
 with st.sidebar.form("anon_form", clear_on_submit=True):
-    st.write("✍️ Share anonymously (this will appear in the page)")
-    msg = st.text_area("Write anonymously...", height=140)
-    submitted = st.form_submit_button("Send anonymously")
-    if submitted and msg.strip():
-        st.session_state.anon_messages.insert(0, {"msg": msg.strip(), "time": time.asctime()})
-        st.success("Message sent — refresh the page (or scroll) to see it in the site.")
+    st.write("✍️ Share anonymously (appears on the page)")
+    anon_msg = st.text_area("Write anonymously...", height=140)
+    if st.form_submit_button("Send anonymously"):
+        if anon_msg and anon_msg.strip():
+            st.session_state.anon_messages.insert(0, {"msg": anon_msg.strip(), "time": time.asctime()})
+            st.success("Message saved — scroll to the Writings section to see it.")
 
-# Gather data for injection
-gallery_urls = get_gallery_images()
-posts = get_posts()
-anon_messages = st.session_state.anon_messages
+# ---------------- DATA to inject into HTML ----------------
+gallery_list = get_gallery_images()
+posts_list = get_blog_posts()
+anon_list = st.session_state.anon_messages
 
-# Social links
+# social links
 INSTAGRAM = "https://instagram.com/aryanxsharma26"
 LINKEDIN = "https://www.linkedin.com/in/aryan-sharma99999"
 
-# Convert to JSON strings for safe injection
-js_gallery = json.dumps(gallery_urls)
-js_posts = json.dumps(posts)
-js_anon = json.dumps(anon_messages)
+# prepare JSON strings
+js_gallery = json.dumps(gallery_list)
+js_posts = json.dumps(posts_list)
+js_anon = json.dumps(anon_list)
 js_facts = json.dumps(ARYAN_FACTS)
 js_social = json.dumps({"instagram": INSTAGRAM, "linkedin": LINKEDIN})
 
-# ---------- Full HTML (single component) ----------
-html = f"""
+# ---------------- MAIN HTML COMPONENT (safe triple-quoted string) ----------------
+html_template = """
 <!doctype html>
 <html>
 <head>
@@ -111,81 +112,59 @@ html = f"""
   <title>Aryan Sharma — Portfolio</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root {{
-      --accent1: #b14cff;
-      --accent2: #7a3cff;
+    :root{
+      --accent1:#b14cff;
+      --accent2:#7a3cff;
       --glass: rgba(255,255,255,0.03);
       --text: #eaf6ff;
-    }}
-    html,body{{height:100%;margin:0;padding:0;font-family:Inter,system-ui,Arial;color:var(--text);background:#060110;overflow-y:auto;}}
-    /* Canvas background covers whole viewport and scroll area */
-    #anim-bg {{ position: fixed; inset: 0; z-index: 0; pointer-events:none; }}
-    /* App container above canvas */
-    .site {{ position: relative; z-index: 5; min-height:100vh; display:flex; flex-direction:column; align-items:center; gap:28px; padding:40px 32px; box-sizing:border-box; }}
+    }
+    html,body{height:100%;margin:0;padding:0;background:#060010; font-family:Inter,system-ui,Arial; color:var(--text); -webkit-font-smoothing:antialiased;}
+    /* Canvas covers full viewport and stays behind everything */
+    #anim-bg { position: fixed; inset: 0; width:100vw; height:100vh; z-index: 0; pointer-events:none; }
+    /* Site container on top of canvas */
+    .site { position: relative; z-index: 5; min-height:100vh; display:flex; flex-direction:column; align-items:center; gap:28px; padding:36px; box-sizing:border-box; }
     /* Hero */
-    .hero-card {{
-      width: min(1150px, 92%);
-      border-radius:20px;
-      padding:40px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border:1px solid rgba(255,255,255,0.03);
-      box-shadow: 0 40px 120px rgba(6,6,12,0.7);
-      text-align:center;
-      backdrop-filter: blur(10px) saturate(130%);
-      -webkit-backdrop-filter: blur(10px) saturate(130%);
-    }}
-    .hero-title{{ font-size:48px; font-weight:800; margin:0; background: linear-gradient(90deg,#ffd1ff,#c8b1ff); -webkit-background-clip:text; color:transparent; }}
-    .hero-sub{{ margin-top:8px; font-size:18px; color: rgba(230,240,255,0.95); }}
-    .typewrap{{ margin-top:14px; font-weight:700; font-size:20px; color:#d6c9ff; }}
-    .cta{{ display:flex; gap:12px; justify-content:center; margin-top:20px; }}
-    .btn{{ padding:10px 18px; border-radius:999px; border:none; cursor:pointer; font-weight:800; }}
-    .btn-primary{{ background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:#0b1220; box-shadow: 0 10px 30px rgba(16,8,40,0.55); }}
-    .btn-ghost{{ background:transparent; color:#dfefff; border:1px solid rgba(255,255,255,0.04); }}
-
-    /* Layout grid */
-    .main-grid{{ width: min(1150px, 96%); display:grid; grid-template-columns: 300px 1fr; gap:28px; align-items:start; box-sizing:border-box; }}
-    .col-left, .col-right{{ box-sizing:border-box; }}
-    .glass-card{{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 36px rgba(6,6,12,0.45); }}
-    .section-title{{ font-weight:800; color:#d6e8ff; display:flex; gap:10px; align-items:center; }}
-
-    /* Gallery grid */
-    .gallery-grid{{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin-top:10px; }}
-    .gallery-grid img{{ width:100%; height:140px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.025); transition: transform .25s ease, box-shadow .25s ease; }}
-    .gallery-grid img:hover{{ transform: translateY(-6px); box-shadow:0 18px 50px rgba(10,6,30,0.6); }}
-
+    .hero-card{ width: min(1150px,92%); border-radius:18px; padding:36px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); box-shadow: 0 30px 90px rgba(6,6,12,0.6); text-align:center; backdrop-filter: blur(10px) saturate(130%); -webkit-backdrop-filter: blur(10px) saturate(130%); }
+    .hero-title{ font-size:46px; font-weight:800; margin:0; background: linear-gradient(90deg,#ffd1ff,#c8b1ff); -webkit-background-clip:text; color:transparent; }
+    .hero-sub{ margin-top:8px; font-size:18px; color: rgba(230,240,255,0.95); }
+    .typewrap{ margin-top:12px; font-weight:700; font-size:20px; color:#d6c9ff; }
+    .cta{ display:flex; gap:12px; justify-content:center; margin-top:18px; }
+    .btn{ padding:10px 18px; border-radius:999px; border:none; cursor:pointer; font-weight:800; }
+    .btn-primary{ background: linear-gradient(90deg,var(--accent1),var(--accent2)); color:#0b1220; box-shadow:0 10px 30px rgba(16,8,40,0.5); }
+    .btn-ghost{ background:transparent; color:#dfefff; border:1px solid rgba(255,255,255,0.04); }
+    /* Main grid */
+    .main-grid{ width: min(1150px,96%); display:grid; grid-template-columns: 300px 1fr; gap:28px; align-items:start; box-sizing:border-box; }
+    .col-left, .col-right{ box-sizing:border-box; }
+    .glass-card{ background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 36px rgba(6,6,12,0.45); }
+    .section-title{ font-weight:800; color:#d6e8ff; display:flex; gap:10px; align-items:center; }
+    /* Gallery */
+    .gallery-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin-top:10px; }
+    .gallery-grid img{ width:100%; height:140px; object-fit:cover; border-radius:8px; border:1px solid rgba(255,255,255,0.025); transition: transform .25s ease, box-shadow .25s ease; }
+    .gallery-grid img:hover{ transform: translateY(-6px); box-shadow:0 18px 50px rgba(10,6,30,0.6); }
     /* Posts */
     .post-card{ margin-bottom:18px; padding:10px; border-radius:10px; }
     .post-card h3{ margin:0; color:#eaf6ff; }
     .post-card .date{ color:rgba(200,220,255,0.65); font-size:13px; margin-bottom:8px; }
-
     /* Projects */
     .projects-grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:12px; }
     .proj{ padding:12px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01)); }
-
-    /* Footer / socials */
-    .footer{ width: min(1150px,96%); padding:10px 12px; color: rgba(200,220,255,0.85); display:flex; justify-content:space-between; align-items:center; }
-
     /* Chat orb */
-    .chat-orb{ position: fixed; right:28px; bottom:28px; width:68px; height:68px; border-radius:999px; z-index:9999; display:flex; align-items:center; justify-content:center; cursor:pointer; background: linear-gradient(180deg, #110017, #1a0028); border:2px solid var(--accent1); box-shadow:0 40px 90px rgba(120,40,180,0.18); color: #fff; font-size:28px;}
+    .chat-orb{ position: fixed; right:28px; bottom:28px; width:68px; height:68px; border-radius:999px; z-index:9999; display:flex; align-items:center; justify-content:center; cursor:pointer; background: linear-gradient(180deg,#110017,#1a0028); border:2px solid var(--accent1); box-shadow:0 40px 90px rgba(120,40,180,0.18); color:#fff; font-size:28px; }
     .chat-pop{ position: fixed; right:28px; bottom:108px; width:380px; max-width:92vw; border-radius:12px; overflow:hidden; z-index:9999; display:none; box-shadow:0 30px 100px rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.03); background: linear-gradient(180deg, rgba(6,8,12,0.98), rgba(8,10,16,0.98)); }
     .chat-head{ padding:12px; font-weight:800; color:#dff6ff; border-bottom:1px solid rgba(255,255,255,0.03); }
     .chat-body{ max-height:260px; overflow:auto; padding:12px; color:#eaf6ff; }
     .chat-input{ display:flex; gap:8px; padding:12px; border-top:1px solid rgba(255,255,255,0.02); }
     .chat-input input{ flex:1; padding:10px; border-radius:10px; border:none; background: rgba(255,255,255,0.04); color:var(--text); }
-
-    /* small responsive tweaks */
-    @media (max-width:980px) {{
-      .main-grid{{ grid-template-columns: 1fr; }}
-      .gallery-grid img{{ height:120px; }}
-    }}
+    .footer{ width: min(1150px,96%); padding:10px 12px; color: rgba(200,220,255,0.85); display:flex; justify-content:space-between; align-items:center; }
+    @media (max-width:980px){ .main-grid{ grid-template-columns: 1fr; } .gallery-grid img{ height:120px; } .hero-title{ font-size:34px; } }
   </style>
 </head>
 <body>
   <canvas id="anim-bg"></canvas>
 
-  <div class="site">
+  <div class="site" role="main">
     <!-- HERO -->
-    <div class="hero-card" role="banner" aria-label="Hero">
+    <div class="hero-card" role="banner" aria-label="hero">
       <div class="hero-title">ARYAN SHARMA</div>
       <div class="hero-sub">Welcome to my personal website!</div>
       <div class="typewrap">I'm a <span id="typewriter">web developer</span></div>
@@ -197,13 +176,11 @@ html = f"""
     </div>
 
     <!-- MAIN GRID -->
-    <div class="main-grid" role="main">
+    <div class="main-grid">
       <div class="col-left">
         <div class="glass-card">
           <div class="section-title">📸 Photos (Gallery)</div>
-          <div class="gallery-grid" id="galleryGrid">
-            <!-- images injected via JS -->
-          </div>
+          <div class="gallery-grid" id="galleryGrid"></div>
         </div>
 
         <div style="height:18px"></div>
@@ -211,37 +188,30 @@ html = f"""
         <div class="glass-card">
           <div class="section-title">💼 Projects</div>
           <div class="projects-grid" id="projectsGrid">
-            <!-- projects -->
             <div class="proj"><strong>Chatbot Website</strong><div style="opacity:.8">Client-side Q&A & demo.</div></div>
             <div class="proj"><strong>Portfolio Builder</strong><div style="opacity:.8">Template & theme.</div></div>
             <div class="proj"><strong>AI Experiments</strong><div style="opacity:.8">Small ML projects.</div></div>
           </div>
         </div>
-
       </div>
 
       <div class="col-right">
         <div class="glass-card">
           <div class="section-title">✍️ Writings (Anonymous)</div>
-          <div id="anonList" style="margin-top:8px">
-            <!-- anon messages show here via JS -->
-          </div>
+          <div id="anonList" style="margin-top:8px;"></div>
         </div>
 
         <div style="height:18px"></div>
 
         <div class="glass-card">
           <div class="section-title">📰 Blog Posts</div>
-          <div id="postsArea" style="margin-top:12px">
-            <!-- posts injected via JS -->
-          </div>
+          <div id="postsArea" style="margin-top:12px;"></div>
         </div>
-
       </div>
     </div>
 
     <div class="footer">
-      <div>© {time.strftime('%Y')} Aryan Sharma</div>
+      <div>© {YEAR} Aryan Sharma</div>
       <div>Built with ❤️ · <a href="{LINKEDIN}" target="_blank" style="color:#cde8ff">LinkedIn</a> · <a href="{INSTAGRAM}" target="_blank" style="color:#cde8ff">Instagram</a></div>
     </div>
   </div>
@@ -257,29 +227,31 @@ html = f"""
   </div>
 
 <script>
-  // Injected data (from Streamlit python)
-  window.ST_GALLERY = {js_gallery};
-  window.ST_POSTS = {js_posts};
-  window.ST_ANON = {js_anon};
-  window.ST_FACTS = {js_facts};
-  window.ST_SOCIAL = {js_social};
+  // Injected data placeholders will be replaced by Python before rendering
+  window.ST_GALLERY = __GALLERY__;
+  window.ST_POSTS = __POSTS__;
+  window.ST_ANON = __ANON__;
+  window.ST_FACTS = __FACTS__;
+  window.ST_SOCIAL = __SOCIAL__;
 
-  /* ----------------- Canvas animated galaxy (full page) ----------------- */
+  /* ----------------- Canvas animated galaxy (moving starfield + nebula) ----------------- */
   (function(){
     const canvas = document.getElementById('anim-bg');
     const ctx = canvas.getContext('2d');
+
     function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     resize(); window.addEventListener('resize', resize);
 
-    // stars + nebula
+    // stars data
     const stars = [];
-    for(let i=0;i<520;i++){
+    const STAR_COUNT = Math.max(300, Math.floor((window.innerWidth * window.innerHeight) / 4000));
+    for(let i=0;i<STAR_COUNT;i++){
       stars.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height,
+        x: Math.random()*window.innerWidth,
+        y: Math.random()*window.innerHeight,
         r: Math.random()*1.8 + 0.2,
-        s: Math.random()*0.6 + 0.1,
-        o: Math.random()*0.8 + 0.2
+        s: Math.random()*0.8 + 0.1,
+        o: Math.random()*0.9 + 0.1
       });
     }
 
@@ -294,7 +266,7 @@ html = f"""
       ctx.fillStyle = g;
       ctx.fillRect(0,0,canvas.width,canvas.height);
 
-      // moving subtle nebula blob
+      // subtle moving nebula
       const cx = canvas.width * 0.7 + Math.sin(t*0.6)*120;
       const cy = canvas.height * 0.3 + Math.cos(t*0.4)*90;
       const rad = Math.max(canvas.width, canvas.height) * 0.8;
@@ -342,14 +314,14 @@ html = f"""
     tick();
   })();
 
-  /* ----------------- Inject gallery, posts, anon ----------------- */
+  /* ----------------- Inject gallery, posts and anon messages ----------------- */
   (function(){
     const gallery = window.ST_GALLERY || [];
     const posts = window.ST_POSTS || [];
     const anon = window.ST_ANON || [];
 
     const gnode = document.getElementById('galleryGrid');
-    if(gallery.length === 0){
+    if(!gallery || gallery.length === 0){
       gnode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No images found in gallery/</div>";
     } else {
       gnode.innerHTML = '';
@@ -361,20 +333,21 @@ html = f"""
     }
 
     const postsNode = document.getElementById('postsArea');
-    if(posts.length === 0){
+    if(!posts || posts.length === 0){
       postsNode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No blog posts found in blog_posts/</div>";
     } else {
       postsNode.innerHTML = '';
       for(const p of posts){
         const card = document.createElement('div');
         card.className = 'post-card';
-        card.innerHTML = `<h3>${p.title}</h3>${p.date?("<div class='date'>"+p.date+"</div>"):""}<div style='margin-top:8px;color:rgba(220,235,255,0.95)'>${p.html}</div>`;
+        const dateHtml = p.date ? `<div class='date'>${p.date}</div>` : '';
+        card.innerHTML = `<h3>${p.title}</h3>${dateHtml}<div style='margin-top:8px;color:rgba(220,235,255,0.95)'>${p.html}</div>`;
         postsNode.appendChild(card);
       }
     }
 
     const anonNode = document.getElementById('anonList');
-    if(anon.length === 0){
+    if(!anon || anon.length === 0){
       anonNode.innerHTML = "<div style='color:rgba(200,220,255,0.6);padding:8px'>No anonymous writings yet. Use the sidebar form to post.</div>";
     } else {
       anonNode.innerHTML = '';
@@ -397,69 +370,76 @@ html = f"""
     const send = document.getElementById('chatSend');
     const facts = window.ST_FACTS || {};
 
-    function addMsg(txt, who){
-      const d = document.createElement('div');
-      d.textContent = txt;
-      d.style.padding = '8px 10px';
-      d.style.marginBottom = '8px';
-      d.style.borderRadius = '10px';
+    function addMsg(text, who){
+      const el = document.createElement('div');
+      el.textContent = text;
+      el.style.padding = '8px 10px';
+      el.style.marginBottom = '8px';
+      el.style.borderRadius = '10px';
       if(who === 'user'){
-        d.style.background = 'rgba(255,255,255,0.08)';
-        d.style.textAlign = 'right';
+        el.style.background = 'rgba(255,255,255,0.08)';
+        el.style.textAlign = 'right';
       } else {
-        d.style.background = 'rgba(110,140,255,0.06)';
+        el.style.background = 'rgba(110,140,255,0.06)';
       }
-      body.appendChild(d); body.scrollTop = body.scrollHeight;
+      body.appendChild(el);
+      body.scrollTop = body.scrollHeight;
     }
 
-    orb.addEventListener('click', ()=>{
-      const show = pop.style.display === 'block';
-      pop.style.display = show ? 'none' : 'block';
-      if(!show && body.children.length === 0) addMsg("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕", 'bot');
+    orb.addEventListener('click', function(){
+      const showing = pop.style.display === 'block';
+      pop.style.display = showing ? 'none' : 'block';
+      if(!showing && body.children.length === 0) addMsg("Hi! I'm Aryan's assistant — ask me anything about Aryan ☕");
       input.focus();
     });
 
-    send.addEventListener('click', ()=>{
-      const q = (input.value||'').trim(); if(!q) return;
-      addMsg(q,'user'); input.value = '';
-      setTimeout(()=> {
+    send.addEventListener('click', function(){
+      const q = (input.value || '').trim();
+      if(!q) return;
+      addMsg(q,'user');
+      input.value = '';
+      setTimeout(function(){
         const lq = q.toLowerCase();
         let out = null;
-        for(const k in facts){ if(lq.includes(k)) { out = facts[k]; break; } }
+        for(const k in facts){
+          if(lq.includes(k)) { out = facts[k]; break; }
+        }
         if(!out){
           if(lq.includes('name')) out = "Aryan Sharma — that guy with stories & coffee.";
-          else if(lq.includes('coffee')) out = facts["what’s aryan’s comfort drink"] || "Coffee ☕";
+          else if(lq.includes('coffee')) out = facts["what's aryan's comfort drink"] || "Coffee ☕";
           else out = "Ask me anything about Aryan ☕🙂!";
         }
         addMsg(out,'bot');
       }, 260 + Math.random()*420);
     });
 
-    input.addEventListener('keydown', (e) => { if(e.key === 'Enter') { e.preventDefault(); send.click(); }});
+    input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); send.click(); }});
   })();
-
 </script>
 </body>
 </html>
 """
 
-# ---------- Render component ----------
-# Give a tall height to allow scrolling inside the HTML page
+# ------------------ Replace placeholders with real JSON / values ------------------
+html = html_template.replace("__GALLERY__", js_gallery).replace("__POSTS__", js_posts).replace("__ANON__", js_anon).replace("__FACTS__", js_facts).replace("__SOCIAL__", js_social)
+html = html.replace("{LINKEDIN}", LINKEDIN).replace("{INSTAGRAM}", INSTAGRAM).replace("{YEAR}", str(time.localtime().tm_year))
+
+# Render the HTML inside Streamlit (allow scrolling)
 components.html(html, height=900, scrolling=True)
 
-# ---------- Force Streamlit page to be transparent so the canvas shows through ----------
-st.markdown(
-    """
+# Make Streamlit page background transparent so our canvas shows through
+st.markdown("""
     <style>
     html, body, .stApp, .block-container { background: transparent !important; }
     iframe[srcdoc] { min-height: 100vh !important; height: 100vh !important; }
     </style>
-    """, unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
 
-# ---------- Small Streamlit fallback content (in case) ----------
+# Small fallback / editor area below the component (Streamlit native) to manage files
+st.markdown("---")
 st.markdown("### Editor: Gallery & Blog")
-st.markdown("Add images to the `/gallery` folder (jpg/png) and markdown posts to `/blog_posts` to see them appear in the page above.")
+st.markdown("• Add images to the `gallery/` folder (jpg, png, webp, gif). They will appear in the gallery grid above.")
+st.markdown("• Put markdown files (`.md`) in `blog_posts/` — they will be parsed and shown in Blog Posts.")
 st.markdown("---")
 st.write("LinkedIn:", LINKEDIN)
 st.write("Instagram:", INSTAGRAM)
