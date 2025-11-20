@@ -1,12 +1,12 @@
 # app.py
-# Ultra-Premium "Cyber-Luxury Neon Galaxy" single-file Streamlit site
-# - Full-screen animated background across the whole page
-# - Glowing animated hero card with moving border line
-# - Parallax, rings, particle trails, typewriter roles
-# - Floating chatbot (client-side Q&A using provided facts)
-# - Gallery reads /gallery, blog reads /blog_posts
-# - All placeholders safely injected (no % formatting issues)
-# Paste this file as-is and run with Streamlit.
+# Version 1A — Ultra-Premium Purple–Pink Neon (FULLSCREEN, section-based)
+# Single-file Streamlit app that injects a full-screen HTML/CSS/JS site via components.html.
+# - Fullscreen sections (hero, gallery, writings, blog, projects, contact)
+# - Animated nebula/particles background
+# - Glowing hero border with flowing line
+# - Typewriter roles + floating chat orb with local Q&A using provided facts
+# - Gallery reads files from ./gallery/, blog reads from ./blog_posts/
+# IMPORTANT: paste this file into your app folder (alongside gallery/ and blog_posts/)
 
 import os
 import re
@@ -16,22 +16,9 @@ import streamlit as st
 import streamlit.components.v1 as components
 from markdown import markdown
 
-st.set_page_config(page_title="Aryan Sharma — Cyber-Luxury", layout="wide")
+st.set_page_config(page_title="Aryan Sharma — Ultra Premium", layout="wide")
 
-# ---------------- hide Streamlit chrome & ensure transparent containers ----------------
-st.markdown("""
-<style>
-/* hide header/menu/footer */
-#MainMenu, header, footer { visibility: hidden !important; height: 0 !important; }
-
-/* force block container full width and no padding so HTML component can control layout */
-.block-container { padding: 0 !important; margin: 0 auto !important; max-width: 100% !important; }
-.main { padding: 0 !important; margin: 0 !important; }
-html, body { background: transparent !important; overflow-x: hidden !important; }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- Helpers: gallery & blog reading ----------------
+# ---------------- Utility: read gallery & blog posts ----------------
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 GALLERY_DIR = os.path.join(BASE_DIR, "gallery")
 POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
@@ -39,7 +26,8 @@ POSTS_DIR = os.path.join(BASE_DIR, "blog_posts")
 def get_gallery_images():
     if not os.path.exists(GALLERY_DIR):
         return []
-    files = [f for f in sorted(os.listdir(GALLERY_DIR)) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif"))]
+    files = sorted(f for f in os.listdir(GALLERY_DIR) if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")))
+    # return relative paths so Streamlit serves them
     return [os.path.join("gallery", f) for f in files]
 
 def get_post_data(slug):
@@ -55,7 +43,7 @@ def get_post_data(slug):
         meta_block = m.group(1)
         for line in meta_block.splitlines():
             if ':' in line:
-                k, v = line.split(':', 1)
+                k,v = line.split(':',1)
                 meta[k.strip()] = v.strip()
         body = txt[m.end():].strip()
     return {
@@ -70,7 +58,7 @@ def get_post_data(slug):
 def get_all_posts():
     if not os.path.exists(POSTS_DIR):
         return []
-    mds = [f for f in sorted(os.listdir(POSTS_DIR)) if f.endswith(".md")]
+    mds = sorted(f for f in os.listdir(POSTS_DIR) if f.endswith(".md"))
     posts = []
     for m in mds:
         p = get_post_data(m[:-3])
@@ -104,261 +92,262 @@ ARYAN_FACTS = {
 
 facts_json = json.dumps(ARYAN_FACTS)
 
-# ---------------- Build gallery HTML safely ----------------
-gallery_images = get_gallery_images()
-if gallery_images:
+# ---------------- Build HTML fragments for gallery & posts ----------------
+gallery_imgs = get_gallery_images()
+if gallery_imgs:
     gallery_html = ""
-    for i, src in enumerate(gallery_images):
+    for i, src in enumerate(gallery_imgs):
         alt = os.path.basename(src)
-        # Note: using simple img tag; Streamlit serves files from local folder when path is relative
-        gallery_html += f'<div class="gallery-item"><img src="{src}" alt="{alt}" loading="lazy"/></div>\n'
+        gallery_html += f'<div class="g-item"><img src="{src}" alt="{alt}" loading="lazy"/></div>\n'
 else:
-    gallery_html = '<div class="empty">No images found in <code>gallery/</code></div>'
+    gallery_html = '<div class="g-empty">No images found in <code>gallery/</code></div>'
 
-# ---------------- Build posts HTML safely ----------------
 posts = get_all_posts()
 if posts:
     posts_html = ""
     for p in posts:
         title = p["title"]
-        date = p.get("date", "")
-        html_body = p["html"]
+        date = p.get("date","")
+        body_html = p["html"]
         posts_html += f'''
-        <article class="post-card">
-          <h3 class="post-title">{title}</h3>
-          <div class="post-meta">{date}</div>
-          <div class="post-body">{html_body}</div>
+        <article class="post">
+          <h4 class="post-title">{title}</h4>
+          <div class="post-date">{date}</div>
+          <div class="post-body">{body_html}</div>
         </article>
         '''
 else:
-    posts_html = '<div class="empty">No blog posts in <code>blog_posts/</code></div>'
+    posts_html = '<div class="g-empty">No blog posts found (add .md files to blog_posts/)</div>'
 
-# ---------------- Social links ----------------
+# ---------------- Socials & meta ----------------
 linkedin = "https://www.linkedin.com/in/aryan-sharma99999"
 instagram = "https://instagram.com/aryanxsharma26"
 year_str = str(time.localtime().tm_year)
 
-# ---------------- HTML TEMPLATE (placeholders used) ----------------
-html_template = """
+# ---------------- Fullscreen HTML (placeholders replaced safely below) ----------------
+html = r"""
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Aryan Sharma — Cyber-Luxury</title>
+<title>Aryan Sharma — Ultra Premium</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg0: #03000a;
-  --nebula1: rgba(140,40,200,0.12);
-  --nebula2: rgba(60,120,255,0.06);
-  --glass: rgba(255,255,255,0.03);
-  --accent1: #c56cff;
-  --accent2: #5ef3ff;
-  --muted: rgba(220,230,255,0.85);
+  --bgA: #160021;
+  --bgB: #2b003f;
+  --accent1: #ff66d6;
+  --accent2: #6af0ff;
+  --muted: rgba(230,230,255,0.9);
+  --card-bg: rgba(255,255,255,0.02);
 }
-
-/* reset */
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;padding:0;background:var(--bg0);font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto;color:var(--muted);-webkit-font-smoothing:antialiased}
+html,body{height:100%;margin:0;padding:0;background:linear-gradient(180deg,var(--bgA),var(--bgB));font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto;color:var(--muted);overflow:hidden}
+a{color:var(--accent2);text-decoration:underline}
 
-/* full canvas layers */
-#canvas-wrap { position:fixed; inset:0; z-index:-4; pointer-events:none; }
-.nebula-layer { position:fixed; inset:0; z-index:-3; pointer-events:none; background:
-    radial-gradient(ellipse at 70% 30%, var(--nebula1), transparent 15%),
-    radial-gradient(ellipse at 20% 80%, var(--nebula2), transparent 18%); opacity:0.95; }
-.starfield { position:fixed; inset:0; z-index:-2; background-image: radial-gradient(#fff 1px, transparent 1px); background-size:6px 6px; opacity:0.12; pointer-events:none; }
+/* canvas layers (nebula + stars) */
+#bg { position:fixed; inset:0; z-index:-6; }
+.nebula { position:fixed; inset:0; background:
+   radial-gradient(40% 40% at 10% 20%, rgba(255,102,214,0.06), transparent 8%),
+   radial-gradient(60% 40% at 80% 80%, rgba(106,240,255,0.05), transparent 10%);
+   filter:blur(18px) saturate(120%); opacity:0.95; z-index:-5; }
+.stars { position:fixed; inset:0; background-image: radial-gradient(#fff 1px, transparent 1px); background-size:5px 5px; opacity:0.12; z-index:-4 }
 
-/* navbar */
-.navbar { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:70; display:flex; gap:12px; padding:8px 14px; border-radius:999px; backdrop-filter: blur(8px) saturate(120%); background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); }
-.brand { font-weight:900; letter-spacing:1px; color:#f6ecff; padding-right:10px; }
-.nav-item { color:var(--muted); padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:700; opacity:0.95 }
-.nav-item:hover { background: rgba(255,255,255,0.02); transform:translateY(-3px); }
+/* snap container for fullscreen sections */
+.container { height:100vh; width:100vw; scroll-snap-type: y mandatory; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-/* layout container */
-.container { width:100%; max-width:1180px; margin:0 auto; padding:0 24px; }
+/* section basics */
+.section { height:100vh; min-height:600px; display:flex; align-items:center; justify-content:center; scroll-snap-align: start; padding:32px; }
 
-/* HERO */
-.hero { height:100vh; display:flex; align-items:center; justify-content:center; }
-.hero-card { width:92%; max-width:1060px; border-radius:20px; padding:56px 48px; text-align:center; position:relative; overflow:hidden; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); box-shadow: 0 40px 120px rgba(6,6,12,0.7); backdrop-filter: blur(12px) saturate(140%); }
+/* NAV */
+.navbar { position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:90; display:flex; gap:10px; padding:8px 12px; border-radius:999px; backdrop-filter:blur(8px); background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.03); }
+.nav-brand{ font-weight:800; letter-spacing:1px; color:#fff; padding-right:8px }
+.nav-link{ padding:8px 10px; border-radius:8px; font-weight:700; cursor:pointer; color:var(--muted) }
+.nav-link:hover{ transform:translateY(-3px); background: rgba(255,255,255,0.02) }
 
-/* animated neon border using pseudo element */
-.hero-card:before{
-  content:""; position:absolute; inset:-3px; border-radius:22px; padding:3px; z-index:0;
-  background: linear-gradient(90deg, rgba(197,108,255,0.0), var(--accent1), var(--accent2), var(--accent1), rgba(197,108,255,0.0));
-  background-size:400% 400%;
+/* HERO card */
+.hero-card{ width:92%; max-width:1100px; padding:56px; border-radius:22px; text-align:center; position:relative; overflow:hidden; background:var(--card-bg); border:1px solid rgba(255,255,255,0.035); box-shadow:0 40px 120px rgba(20,0,40,0.6); backdrop-filter: blur(12px) saturate(140%); }
+.hero-title{ font-size:56px; font-weight:900; margin:0; background:linear-gradient(90deg,var(--accent1),var(--accent2)); -webkit-background-clip:text; color:transparent; }
+.hero-sub{ margin-top:12px; color:rgba(230,230,255,0.9) }
+.role { margin-top:12px; font-weight:800; color:#ffdff8 }
+
+/* animated flowing neon border */
+.hero-card::before{
+  content:""; position:absolute; inset:-3px; border-radius:26px; padding:3px; z-index:0;
+  background: linear-gradient(90deg, rgba(255,102,214,0.0), var(--accent1), var(--accent2), var(--accent1), rgba(255,102,214,0.0));
+  background-size:300% 300%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  animation: borderFlow 6s linear infinite;
-  box-shadow: 0 14px 80px rgba(120,40,180,0.12) inset;
+  animation: neonFlow 6s linear infinite;
+  filter: drop-shadow(0 30px 60px rgba(120,40,180,0.18));
 }
-@keyframes borderFlow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+@keyframes neonFlow{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
 
-.rings { position:absolute; left:50%; top:20%; transform:translateX(-50%); z-index:0; pointer-events:none; filter: blur(12px); opacity:0.7; }
-.ring { width:820px; height:420px; border-radius:50%; border:1px solid rgba(140,80,200,0.06); box-shadow: inset 0 0 120px rgba(140,80,200,0.02); animation: floaty 18s ease-in-out infinite; }
-.ring.r2 { width:1060px; height:520px; animation-duration:26s; opacity:0.55; filter: blur(20px) saturate(120%); }
-@keyframes floaty { 0%{transform:translate(-50%,-3%) scale(1)} 50%{transform:translate(-50%,3%) scale(1.01)} 100%{transform:translate(-50%,-3%) scale(1)} }
+/* subtle rings for depth */
+.rings{ position:absolute; left:50%; top:10%; transform:translateX(-50%); z-index:0; pointer-events:none }
+.rings .r1{ width:820px; height:420px; border-radius:50%; border:1px solid rgba(255,255,255,0.02); filter: blur(18px); opacity:0.7; }
 
-.hero-title { font-size:56px; font-weight:900; margin:0; z-index:2; background:linear-gradient(90deg,var(--accent1),var(--accent2)); -webkit-background-clip:text; color:transparent; }
-.hero-sub { margin-top:12px; color:rgba(230,230,255,0.9); z-index:2; }
-.typewriter { margin-top:12px; font-weight:800; color:#ffdff8; z-index:2; }
+/* CTA buttons */
+.cta{ margin-top:18px; display:flex; justify-content:center; gap:12px; z-index:2 }
+.btn{ padding:10px 18px; border-radius:999px; font-weight:800; cursor:pointer; border:none }
+.btn-primary{ background:linear-gradient(90deg,var(--accent1),var(--accent2)); color:#07030a; box-shadow:0 18px 60px rgba(120,40,180,0.12) }
+.btn-ghost{ background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted) }
 
-/* CTA */
-.cta { margin-top:20px; display:flex; gap:12px; justify-content:center; align-items:center; z-index:2; }
+/* SECTIONS: gallery / content */
+.section-content{ width:100%; max-width:1180px; margin:0 auto; display:grid; grid-template-columns: 1fr 1fr; gap:28px; align-items:start }
+.card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:18px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 18px 60px rgba(6,6,10,0.45); }
 
-/* PAGE BODY */
-.page-body { padding:64px 24px 140px; background:transparent; }
+/* gallery grid */
+.gallery-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px }
+.g-item img{ width:100%; height:160px; object-fit:cover; border-radius:8px; transition:transform .28s ease; cursor:zoom-in }
+.g-item img:hover{ transform:scale(1.04); filter: drop-shadow(0 18px 40px rgba(120,40,180,0.18)) }
 
-/* grid layout */
-.grid { display:grid; grid-template-columns: 1fr 1fr; gap:28px; align-items:start; max-width:1180px; margin:0 auto; }
-
-/* glass card */
-.card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 14px 40px rgba(6,6,15,0.5); }
-
-/* gallery */
-.gallery { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-.gallery-item img { width:100%; height:150px; object-fit:cover; border-radius:8px; transition: transform .25s ease; }
-.gallery-item img:hover { transform:scale(1.04); filter: drop-shadow(0 18px 40px rgba(120,40,180,0.18)); }
-
-/* posts */
-.post-card { margin-bottom:14px; padding:12px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); }
-.post-title { margin:0; font-weight:800; color:#f3eaff; }
-.post-meta { color:#cfc7e8; font-size:13px; margin-bottom:8px; }
-
-/* floating chat orb */
-.chat-orb { position:fixed; right:26px; bottom:28px; width:72px; height:72px; border-radius:999px; display:flex; align-items:center; justify-content:center; z-index:80; background:linear-gradient(90deg,var(--accent1),var(--accent2)); color:#07030a; font-weight:900; box-shadow: 0 30px 90px rgba(120,40,180,0.18); cursor:pointer; }
-
-/* chat popup */
-.chat-popup { position:fixed; right:26px; bottom:110px; width:380px; max-width:92vw; border-radius:12px; overflow:hidden; display:none; z-index:90; box-shadow: 0 30px 80px rgba(2,2,8,0.6); border:1px solid rgba(255,255,255,0.03); }
-.chat-head { padding:12px; background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:#eaf8ff; font-weight:800; }
-.chat-body { padding:12px; max-height:260px; overflow:auto; background: linear-gradient(180deg, rgba(6,6,8,0.98), rgba(8,8,10,0.98)); color:var(--muted); }
-.chat-row { padding:12px; display:flex; gap:8px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.007)); }
+/* posts list */
+.posts-list{ display:flex; flex-direction:column; gap:12px }
+.post{ padding:12px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02) }
+.post-title{ margin:0; font-weight:800; color:#f7ecff }
 
 /* footer */
-.footer { padding:40px 20px; text-align:center; color:#d7d2ea; }
+.footer{ text-align:center; padding:30px; color:#d9cfe8 }
 
-@media (max-width:920px){
-  .grid { grid-template-columns: 1fr; }
-  .hero-title { font-size:40px; }
-  .gallery-item img { height:100px; }
-  .hero-card { padding:28px; }
+/* chat orb */
+.chat-orb{ position:fixed; right:26px; bottom:28px; width:72px; height:72px; border-radius:999px; display:flex; align-items:center; justify-content:center; z-index:95; background:linear-gradient(90deg,var(--accent1),var(--accent2)); color:#07030a; font-weight:900; box-shadow: 0 30px 90px rgba(120,40,180,0.18); cursor:pointer }
+
+/* chat popup */
+.chat-popup{ position:fixed; right:26px; bottom:110px; width:420px; max-width:92vw; border-radius:12px; overflow:hidden; display:none; z-index:96; box-shadow:0 30px 80px rgba(2,2,8,0.7); border:1px solid rgba(255,255,255,0.03) }
+.chat-head{ padding:12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); color:var(--muted); font-weight:800 }
+.chat-body{ padding:12px; max-height:260px; overflow:auto; background: linear-gradient(180deg, rgba(6,6,8,0.98), rgba(8,8,10,0.98)); color:var(--muted) }
+.chat-row{ padding:12px; display:flex; gap:8px; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.007)) }
+
+/* small screens */
+@media (max-width:900px){
+  .section-content{ grid-template-columns: 1fr; }
+  .hero-title{ font-size:36px }
+  .g-item img{ height:120px }
 }
 </style>
 </head>
 <body>
-
-<div id="canvas-wrap">
-  <div class="nebula-layer" aria-hidden="true"></div>
-  <div class="starfield" aria-hidden="true"></div>
-</div>
-
-<!-- NAV -->
-<div class="navbar container" role="navigation" aria-label="main-nav">
-  <div class="brand">ARYAN</div>
-  <div class="nav-item" onclick="scrollToId('hero')">Home</div>
-  <div class="nav-item" onclick="scrollToId('gallery')">Gallery</div>
-  <div class="nav-item" onclick="scrollToId('writings')">Writings</div>
-  <div class="nav-item" onclick="scrollToId('blog')">Blog</div>
-  <div class="nav-item" onclick="scrollToId('projects')">Projects</div>
-</div>
-
-<!-- HERO -->
-<section id="hero" class="hero" aria-label="hero">
-  <div class="hero-card container" role="region" aria-labelledby="hero-title">
-    <div class="rings" aria-hidden="true">
-      <div class="ring"></div>
-      <div class="ring r2"></div>
-    </div>
-
-    <h1 class="hero-title" id="hero-title">ARYAN SHARMA</h1>
-    <div class="hero-sub">Crafting ideas into code, stories and experiences.</div>
-    <div class="typewriter">I'm a <span id="role">web developer</span></div>
-
-    <div class="cta">
-      <a class="btn btn-primary" href="/resume.pdf" target="_blank" rel="noreferrer">Download Resume</a>
-      <a class="btn" href="__LINKEDIN__" target="_blank" rel="noreferrer">LinkedIn</a>
-      <a class="btn" href="__INSTAGRAM__" target="_blank" rel="noreferrer">Instagram</a>
-    </div>
-
+  <div id="bg">
+    <div class="nebula" aria-hidden="true"></div>
+    <div class="stars" aria-hidden="true"></div>
   </div>
-</section>
 
-<!-- PAGE BODY -->
-<section class="page-body" id="content" aria-label="content">
-  <div class="grid container">
+  <div class="navbar" role="navigation" aria-label="main-nav">
+    <div class="nav-brand">ARYAN</div>
+    <div class="nav-link" data-target="hero">Home</div>
+    <div class="nav-link" data-target="gallery">Gallery</div>
+    <div class="nav-link" data-target="writings">Writings</div>
+    <div class="nav-link" data-target="blog">Blog</div>
+    <div class="nav-link" data-target="projects">Projects</div>
+  </div>
 
-    <div>
-      <div class="card" id="gallery" role="region" aria-label="gallery">
-        <h3 style="margin-top:0">📸 Photos (Gallery)</h3>
-        <div class="gallery">
-          __GALLERY_HTML__
+  <!-- container with scroll snapping -->
+  <div class="container" id="snapContainer" tabindex="0">
+
+    <!-- HERO SECTION -->
+    <section id="hero" class="section" aria-label="Hero">
+      <div class="hero-card" role="region" aria-labelledby="heroTitle">
+        <div class="rings" aria-hidden="true"><div class="r1"></div></div>
+        <h1 class="hero-title" id="heroTitle">ARYAN SHARMA</h1>
+        <div class="hero-sub">I design, build and tell stories through code.</div>
+        <div class="role">I'm a <span id="typeRole">web developer</span></div>
+        <div class="cta" role="group" aria-label="hero actions">
+          <a class="btn btn-primary" href="/resume.pdf" target="_blank" rel="noreferrer">Download Resume</a>
+          <a class="btn btn-ghost" href="__LINKEDIN__" target="_blank" rel="noreferrer">LinkedIn</a>
+          <a class="btn btn-ghost" href="__INSTAGRAM__" target="_blank" rel="noreferrer">Instagram</a>
         </div>
       </div>
+    </section>
 
-      <div style="height:20px"></div>
-
-      <div class="card" id="projects" role="region" aria-label="projects">
-        <h3 style="margin-top:0">🧩 Projects</h3>
-        <div style="display:flex;flex-direction:column;gap:10px;">
-          <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">Chatbot Website <div style="font-weight:400;font-size:13px;opacity:0.8">Client Q&A demo</div></div>
-          <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">Portfolio Builder <div style="font-weight:400;font-size:13px;opacity:0.8">Template & theme</div></div>
-          <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">AI Experiments <div style="font-weight:400;font-size:13px;opacity:0.8">Small ML projects</div></div>
+    <!-- GALLERY + PROJECTS -->
+    <section id="gallery" class="section" aria-label="Gallery & Projects">
+      <div style="width:100%; max-width:1180px; margin:0 auto;" class="section-content">
+        <div class="card">
+          <h3 style="margin-top:0">📸 Photos (Gallery)</h3>
+          <div class="gallery-grid">
+            __GALLERY_HTML__
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">🧩 Projects</h3>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">Chatbot Website<div style="font-weight:400;font-size:13px;opacity:.8">Client-side Q&A demo</div></div>
+            <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">Portfolio Builder<div style="font-weight:400;font-size:13px;opacity:.8">Template & theme</div></div>
+            <div style="padding:12px;border-radius:8px;background:rgba(255,255,255,0.01);font-weight:700">AI Experiments<div style="font-weight:400;font-size:13px;opacity:.8">Small ML projects</div></div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div>
-      <div class="card" id="writings" role="region" aria-label="writings">
-        <h3 style="margin-top:0">✍️ Writings (anonymous)</h3>
-        <div id="anonList" class="empty">No anonymous writings yet.</div>
+    <!-- WRITINGS + BLOG -->
+    <section id="writings" class="section" aria-label="Writings & Blog">
+      <div style="width:100%; max-width:1180px; margin:0 auto;" class="section-content">
+        <div class="card">
+          <h3 style="margin-top:0">✍️ Writings (Anonymous)</h3>
+          <div id="anonBox" style="min-height:140px">No anonymous writings yet — use the chat or admin to add.</div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">📰 Blog</h3>
+          <div class="posts-list">
+            __POSTS_HTML__
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div style="height:20px"></div>
-
-      <div class="card" id="blog" role="region" aria-label="blog">
-        <h3 style="margin-top:0">📰 Blog Posts</h3>
-        __POSTS_HTML__
+    <!-- CONTACT / FOOTER -->
+    <section id="projects" class="section" aria-label="Contact & Footer">
+      <div style="width:100%; max-width:1180px; margin:0 auto;">
+        <div class="card">
+          <h3 style="margin-top:0">Contact</h3>
+          <p>Connect on <a href="__LINKEDIN__" target="_blank">LinkedIn</a> or <a href="__INSTAGRAM__" target="_blank">Instagram</a>.</p>
+        </div>
+        <div style="height:18px"></div>
+        <div class="card">
+          <h4 style="margin:0">© __YEAR__ Aryan Sharma</h4>
+        </div>
       </div>
+    </section>
+
+  </div>
+
+  <div class="chat-orb" id="chatOrb" title="Ask me about Aryan">✦</div>
+  <div class="chat-popup" id="chatPopup" aria-hidden="true" role="dialog">
+    <div class="chat-head">Ask me about Aryan ☕ <button id="closeChat" style="float:right;background:transparent;border:none;color:var(--muted);cursor:pointer">✕</button></div>
+    <div class="chat-body" id="chatBody"></div>
+    <div class="chat-row">
+      <input id="chatInput" placeholder="Type a question..." style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#0b0b10;color:var(--muted)"/>
+      <button id="chatSend" style="padding:10px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));font-weight:800;color:#071026;cursor:pointer">Send</button>
     </div>
   </div>
-
-  <div style="height:36px"></div>
-
-  <div class="card container" style="max-width:1180px;">
-    <h3 style="margin-top:0">Contact</h3>
-    <p>Connect on <a href="__LINKEDIN__" target="_blank">LinkedIn</a> or <a href="__INSTAGRAM__" target="_blank">Instagram</a>.</p>
-  </div>
-</section>
-
-<footer class="footer">© __YEAR__ Aryan Sharma • Built with ❤️</footer>
-
-<!-- Chat orb and popup -->
-<div class="chat-orb" id="chatOrb" title="Ask me about Aryan">✦</div>
-
-<div class="chat-popup" id="chatPopup" aria-hidden="true" role="dialog">
-  <div class="chat-head">Ask me about Aryan ☕ <button id="closeChat" style="float:right;background:transparent;border:none;color:#9fbde8;cursor:pointer">✕</button></div>
-  <div class="chat-body" id="chatBody"></div>
-  <div class="chat-row">
-    <input id="chatInput" placeholder="Type a question..." style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:#0b0b10;color:var(--muted)" />
-    <button id="chatSend" style="padding:10px 12px;border-radius:8px;border:none;background:linear-gradient(90deg,var(--accent1),var(--accent2));font-weight:800;color:#071026;cursor:pointer">Send</button>
-  </div>
-</div>
 
 <script>
-/* Safe scroll helper */
-function scrollToId(id){
-  const el = document.getElementById(id);
-  if(!el) return;
-  const top = el.getBoundingClientRect().top + window.scrollY - 72;
-  window.scrollTo({ top: top, behavior: 'smooth' });
-}
+// Smooth nav: map nav items
+document.querySelectorAll('.nav-link').forEach(el=>{
+  el.addEventListener('click', ()=> {
+    const id = el.getAttribute('data-target');
+    const sec = document.getElementById(id);
+    if(!sec) return;
+    sec.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
 
-/* Typewriter animation */
+// keyboard: up/down to navigate sections
+(function(){
+  const container = document.getElementById('snapContainer');
+  container.addEventListener('wheel', (e)=> {
+    // allow default; CSS snap will lock to nearest
+  }, {passive:true});
+})();
+
+// Typewriter roles
 (function(){
   const words = ["web developer","tech enthusiast","video editor","writer","learner"];
   let idx = 0, pos = 0, forward = true;
-  const el = document.getElementById('role');
+  const el = document.getElementById('typeRole');
   function tick(){
     const cur = words[idx];
     if(forward){
@@ -373,10 +362,9 @@ function scrollToId(id){
   tick();
 })();
 
-/* Chat client-side simple Q&A (FACTS injected) */
+// Chat: simple client-side Q&A using injected facts
 const ARYAN_FACTS = __FACTS__;
 
-/* Chat UI */
 const orb = document.getElementById('chatOrb');
 const popup = document.getElementById('chatPopup');
 const body = document.getElementById('chatBody');
@@ -385,13 +373,14 @@ const send = document.getElementById('chatSend');
 const closeBtn = document.getElementById('closeChat');
 
 function addMsg(text, who){
-  const el = document.createElement('div');
-  el.style.margin = '8px 0';
-  el.style.padding = '8px';
-  el.style.borderRadius = '10px';
-  if(who === 'user'){ el.style.textAlign = 'right'; el.style.background = 'rgba(255,255,255,0.06)'; el.style.color = '#fff'; el.innerText = text; }
-  else { el.style.textAlign = 'left'; el.style.background = 'linear-gradient(90deg, rgba(120,120,255,0.06), rgba(140,60,200,0.03))'; el.style.color = '#eaf6ff'; el.innerText = text; }
-  body.appendChild(el);
+  const div = document.createElement('div');
+  div.style.margin = '8px 0';
+  div.style.padding = '8px';
+  div.style.borderRadius = '10px';
+  div.style.maxWidth = '90%';
+  if(who === 'user'){ div.style.marginLeft = 'auto'; div.style.background = 'rgba(255,255,255,0.06)'; div.style.color = '#fff'; div.textContent = text; }
+  else { div.style.marginRight = 'auto'; div.style.background = 'linear-gradient(90deg, rgba(120,120,255,0.06), rgba(140,60,200,0.03))'; div.style.color = '#eaf6ff'; div.textContent = text; }
+  body.appendChild(div);
   body.scrollTop = body.scrollHeight;
 }
 
@@ -402,7 +391,7 @@ orb.addEventListener('click', ()=>{
 });
 closeBtn.addEventListener('click', ()=> popup.style.display = 'none');
 
-send.addEventListener('click', ()=>{
+send.addEventListener('click', ()=> {
   const q = (input.value || '').trim();
   if(!q) return;
   addMsg(q, 'user');
@@ -423,17 +412,14 @@ send.addEventListener('click', ()=>{
 });
 input.addEventListener('keydown', (e)=> { if(e.key === 'Enter'){ e.preventDefault(); send.click(); } });
 
-/* Lightbox for gallery images */
-document.querySelectorAll('.gallery-item img').forEach(img=>{
-  img.style.cursor = 'zoom-in';
-  img.addEventListener('click', ()=>{
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed'; overlay.style.inset = 0; overlay.style.background = 'rgba(0,0,0,0.88)';
-    overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = 9999;
-    const big = document.createElement('img'); big.src = img.src; big.style.maxWidth = '92%'; big.style.maxHeight = '92%'; big.style.borderRadius = '10px';
-    overlay.appendChild(big);
-    overlay.addEventListener('click', ()=> document.body.removeChild(overlay));
-    document.body.appendChild(overlay);
+// Lightbox for gallery
+document.querySelectorAll('.g-item img').forEach(img=>{
+  img.addEventListener('click', ()=> {
+    const ov = document.createElement('div'); ov.style.position='fixed'; ov.style.inset=0; ov.style.background='rgba(0,0,0,0.9)'; ov.style.display='flex'; ov.style.alignItems='center'; ov.style.justifyContent='center'; ov.style.zIndex=9999;
+    const big = document.createElement('img'); big.src=img.src; big.style.maxWidth='92%'; big.style.maxHeight='92%'; big.style.borderRadius='10px';
+    ov.appendChild(big);
+    ov.addEventListener('click', ()=> document.body.removeChild(ov));
+    document.body.appendChild(ov);
   });
 });
 </script>
@@ -441,20 +427,22 @@ document.querySelectorAll('.gallery-item img').forEach(img=>{
 </html>
 """
 
-# ---------------- Safe replacements (avoid %-formatting) ----------------
-html = html_template.replace("__GALLERY_HTML__", gallery_html)
+# ---------------- Replace placeholders safely ----------------
+html = html.replace("__GALLERY_HTML__", gallery_html)
 html = html.replace("__POSTS_HTML__", posts_html)
 html = html.replace("__LINKEDIN__", linkedin)
 html = html.replace("__INSTAGRAM__", instagram)
 html = html.replace("__YEAR__", year_str)
+# facts_json contains quotes and braces — inject raw JSON string literal into JS
 html = html.replace("__FACTS__", facts_json)
 
-# ---------------- Render component ----------------
-# Use a tall height but enable scrolling inside the component so the page behaves normally.
-components.html(html, height=960, scrolling=True)
+# ---------------- Render as a single components.html (scrolling enabled) ----------------
+# Use a large height and let the internal CSS manage full-screen snapping.
+components.html(html, height=1100, scrolling=True)
 
-# ---------------- Optional admin sidebar (small helpers) ----------------
-with st.sidebar.expander("Admin: Quick tips", expanded=True):
-    st.write("• Add images to `gallery/` (jpg/png/webp/gif) to populate the gallery.")
-    st.write("• Add blog posts as `.md` files in `blog_posts/` (optional YAML frontmatter).")
-    st.write("• The chat uses local client-side rules. Tell me if you want OpenAI integration.")
+# ---------------- Optional simple admin hints in Streamlit sidebar ----------------
+with st.sidebar.expander("Admin / Notes", expanded=True):
+    st.write("• This is Version 1A (Fullscreen section-based). Use left column to view gallery/markdown changes.")
+    st.write("• Add images to `gallery/` (jpg/png/webp/gif) to populate gallery.")
+    st.write("• Add markdown files to `blog_posts/` to publish posts.")
+    st.write("• If you want direct OpenAI-powered chat instead of client-side rules, tell me and I'll wire it in.")
